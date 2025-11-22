@@ -1,5 +1,23 @@
 import SwiftUI
 
+enum AutoLockOption: Int, CaseIterable, Identifiable {
+    case off = 0
+    case oneMinute = 60
+    case fiveMinutes = 300
+    case fifteenMinutes = 900
+    
+    var id: Int { rawValue }
+    
+    var label: String {
+        switch self {
+        case .off: return "Never"
+        case .oneMinute: return "After 1 minute"
+        case .fiveMinutes: return "After 5 minutes"
+        case .fifteenMinutes: return "After 15 minutes"
+        }
+    }
+}
+
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) private var dismiss
@@ -28,6 +46,27 @@ struct SettingsView: View {
                 )
             )
             
+            Picker("Auto-lock when idle", selection: Binding<AutoLockOption>(
+                get: {
+                    let seconds = appState.vaultMeta?.autoLockTimeoutSeconds ?? (5 * 60)
+                    // Map seconds to nearest option
+                    return AutoLockOption(rawValue: seconds) ?? .fiveMinutes
+                },
+                set: { newValue in
+                    guard var meta = appState.vaultMeta else { return }
+                    meta.autoLockTimeoutSeconds = newValue.rawValue
+                    do {
+                        try appState.setVaultMeta(meta)
+                    } catch {
+                        print("Failed to update auto-lock setting:", error)
+                    }
+                }
+            )) {
+                ForEach(AutoLockOption.allCases) { option in
+                    Text(option.label).tag(option)
+                }
+            }
+            
             Button("Change master password…") {
                 showingChangePassword = true
             }
@@ -40,7 +79,7 @@ struct SettingsView: View {
             Spacer()
         }
         .padding()
-        .frame(width: 380, height: 220)
+        .frame(width: 380, height: 260)
         .sheet(isPresented: $showingChangePassword) {
             ChangePasswordView()
                 .environmentObject(appState)

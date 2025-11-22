@@ -54,7 +54,7 @@ struct RootView: View {
         .onReceive(
             Timer.publish(every: 30, on: .main, in: .common).autoconnect()
         ) { _ in
-            appState.checkIdleLock(timeout: 5 * 60) // 5 min idle
+            appState.checkIdleLock()
         }
     }
 }

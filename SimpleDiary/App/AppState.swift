@@ -15,7 +15,7 @@ final class AppState: ObservableObject {
     @Published var vaultMeta: VaultMeta?
     @Published var journalStore: JournalStore?
     @Published var lastActivity: Date? = nil
-
+    
     private(set) var currentKey: SymmetricKey?
     
     private let fileManager = FileManager.default
@@ -76,7 +76,8 @@ final class AppState: ObservableObject {
             let meta = VaultMeta(
                 saltBase64: salt.base64EncodedString(),
                 iterations: iterations,
-                biometricsEnabled: false
+                biometricsEnabled: false,
+                autoLockTimeoutSeconds: 5 * 60
             )
             try saveMeta(meta)
             self.vaultMeta = meta
@@ -183,7 +184,12 @@ final class AppState: ObservableObject {
         let data = try JSONEncoder().encode(meta)
         try data.write(to: metaURL, options: [.atomic])
     }
-    
+
+    func setVaultMeta(_ newMeta: VaultMeta) throws {
+        try saveMeta(newMeta)
+        self.vaultMeta = newMeta
+    }
+
     // MARK: - Change master password
     
     func changePassword(currentPassword: String, newPassword: String) throws {
@@ -259,17 +265,22 @@ final class AppState: ObservableObject {
             }
         }
     }
-
+    
     // MARK: - Activity / idle lock
     
     func noteActivity() {
         lastActivity = Date()
     }
     
-    func checkIdleLock(timeout: TimeInterval = 5 * 60) { // 5 minutes
+    func checkIdleLock() {
         guard mode == .unlocked else { return }
         guard let last = lastActivity else { return }
-        if Date().timeIntervalSince(last) > timeout {
+        
+        // Determine timeout: use stored value or default to 5 minutes
+        let seconds = vaultMeta?.autoLockTimeoutSeconds ?? (5 * 60)
+        if seconds <= 0 { return } // auto-lock disabled
+        
+        if Date().timeIntervalSince(last) > TimeInterval(seconds) {
             lock()
         }
     }

@@ -39,16 +39,14 @@ final class AppState: ObservableObject {
     }
     
     func initialize() async {
-        // Prefer new single-file vault
         if fileManager.fileExists(atPath: vaultURL.path) {
             do {
                 let (header, _) = try VaultFile.read(from: vaultURL)
-                
-                // Rebuild an in-memory meta mirror (prefs come from defaults or fallback)
+
                 let biometricsEnabled = UserDefaults.standard.bool(forKey: "biometricsEnabled")
                 let autoLock = UserDefaults.standard.integer(forKey: "autoLockTimeoutSeconds")
                 let timeout = autoLock > 0 ? autoLock : (5 * 60)
-                
+
                 self.vaultMeta = VaultMeta(
                     saltBase64: header.saltBase64,
                     iterations: header.iterations,
@@ -59,19 +57,6 @@ final class AppState: ObservableObject {
                 self.mode = .locked
             } catch {
                 print("Failed to read vault header:", error)
-                self.mode = .needsSetup
-            }
-        }
-        // Legacy path: old two-file format
-        else if fileManager.fileExists(atPath: metaURL.path),
-                fileManager.fileExists(atPath: entriesURL.path) {
-            do {
-                let data = try Data(contentsOf: metaURL)
-                let meta = try JSONDecoder().decode(VaultMeta.self, from: data)
-                self.vaultMeta = meta
-                self.mode = .locked
-            } catch {
-                print("Failed to load legacy meta:", error)
                 self.mode = .needsSetup
             }
         } else {
@@ -153,11 +138,6 @@ final class AppState: ObservableObject {
             self.journalStore = store
             self.mode = .unlocked
             self.noteActivity()
-            
-            // Optionally: delete legacy two-file format if present
-            try? fileManager.removeItem(at: entriesURL)
-            try? fileManager.removeItem(at: metaURL)
-            
         } catch {
             print("Failed to setup vault:", error)
             self.mode = .needsSetup
@@ -168,76 +148,23 @@ final class AppState: ObservableObject {
 
     func unlockWithPassword(_ password: String) {
         do {
-            if fileManager.fileExists(atPath: vaultURL.path) {
-                // NEW single-file vault path
-                let (header, _) = try VaultFile.read(from: vaultURL)
-                guard let salt = Data(base64Encoded: header.saltBase64) else {
-                    throw NSError(domain: "VaultError", code: -1,
-                                  userInfo: [NSLocalizedDescriptionKey: "Invalid salt in header"])
-                }
-                
-                let keyData = try PBKDF2.deriveKey(
-                    password: password,
-                    salt: salt,
-                    iterations: header.iterations,
-                    keyLength: 32
-                )
-                let key = SymmetricKey(data: keyData)
-                
-                try completeUnlock(with: key)
+            let (header, _) = try VaultFile.read(from: vaultURL)
+            guard let salt = Data(base64Encoded: header.saltBase64) else {
+                throw NSError(domain: "VaultError", code: -1,
+                              userInfo: [NSLocalizedDescriptionKey: "Invalid salt in header"])
             }
-            // LEGACY two-file vault path
-            else if fileManager.fileExists(atPath: metaURL.path),
-                    fileManager.fileExists(atPath: entriesURL.path) {
-                // Load legacy meta
-                let metaData = try Data(contentsOf: metaURL)
-                let meta = try JSONDecoder().decode(VaultMeta.self, from: metaData)
-                
-                guard let saltData = Data(base64Encoded: meta.saltBase64) else {
-                    throw NSError(domain: "VaultError", code: -2,
-                                  userInfo: [NSLocalizedDescriptionKey: "Invalid salt in legacy meta"])
-                }
-                
-                let keyData = try PBKDF2.deriveKey(
-                    password: password,
-                    salt: saltData,
-                    iterations: meta.iterations,
-                    keyLength: 32
-                )
-                let key = SymmetricKey(data: keyData)
-                
-                // Decrypt legacy entries.bin with this key
-                let encrypted = try Data(contentsOf: entriesURL)
-                let crypto = CryptoManager(key: key)
-                let plaintext = try crypto.decrypt(encrypted)   // will throw authFailure if wrong password
-                let entries = try JSONDecoder().decode([JournalEntry].self, from: plaintext)
-                
-                // Build a temporary header from legacy meta
-                let header = VaultHeader(
-                    schemaVersion: meta.schemaVersion,
-                    saltBase64: meta.saltBase64,
-                    iterations: meta.iterations
-                )
-                
-                // Create a store bound to the *new* vaultURL but with legacy entries in memory
-                let store = JournalStore(key: key, vaultURL: vaultURL, header: header)
-                store.entries = entries
-                
-                // In-memory state
-                self.currentKey = key
-                self.journalStore = store
-                self.vaultMeta = meta
-                self.mode = .unlocked
-                self.noteActivity()
-                
-                // Now migrate to single-file vault
-                migrateToSingleFileVaultIfNeeded()
-            }
-            else {
-                print("No vault found to unlock.")
-            }
+
+            let keyData = try PBKDF2.deriveKey(
+                password: password,
+                salt: salt,
+                iterations: header.iterations,
+                keyLength: 32
+            )
+            let key = SymmetricKey(data: keyData)
+
+            try completeUnlock(with: key)
         } catch CryptoKit.CryptoKitError.authenticationFailure {
-            print("Unlock failed: wrong password or corrupted legacy vault")
+            print("Unlock failed: wrong password or corrupted vault")
         } catch {
             print("Unlock failed:", error)
         }
@@ -245,49 +172,14 @@ final class AppState: ObservableObject {
 
     func unlockWithBiometrics() {
         guard vaultMeta?.biometricsEnabled ?? false else { return }
-        
+
         biometricManager.loadKeyWithBiometrics { [weak self] result in
             Task { @MainActor in
                 guard let self else { return }
                 switch result {
                 case .success(let key):
                     do {
-                        if self.fileManager.fileExists(atPath: self.vaultURL.path) {
-                            // New single-file vault path
-                            try self.completeUnlock(with: key)
-                        }
-                        // Legacy two-file path: decrypt entries.bin with biometric key, then migrate
-                        else if self.fileManager.fileExists(atPath: self.metaURL.path),
-                                self.fileManager.fileExists(atPath: self.entriesURL.path) {
-                            // Decrypt legacy entries.bin
-                            let encrypted = try Data(contentsOf: self.entriesURL)
-                            let crypto = CryptoManager(key: key)
-                            let plaintext = try crypto.decrypt(encrypted)
-                            let entries = try JSONDecoder().decode([JournalEntry].self, from: plaintext)
-                            
-                            // Load legacy meta to build header
-                            let metaData = try Data(contentsOf: self.metaURL)
-                            let meta = try JSONDecoder().decode(VaultMeta.self, from: metaData)
-                            
-                            let header = VaultHeader(
-                                schemaVersion: meta.schemaVersion,
-                                saltBase64: meta.saltBase64,
-                                iterations: meta.iterations
-                            )
-                            
-                            let store = JournalStore(key: key, vaultURL: self.vaultURL, header: header)
-                            store.entries = entries
-                            
-                            self.currentKey = key
-                            self.journalStore = store
-                            self.vaultMeta = meta
-                            self.mode = .unlocked
-                            self.noteActivity()
-                            
-                            self.migrateToSingleFileVaultIfNeeded()
-                        } else {
-                            print("Biometric unlock: no vault found.")
-                        }
+                        try self.completeUnlock(with: key)
                     } catch {
                         print("Biometric unlock failed:", error)
                     }
@@ -341,19 +233,6 @@ final class AppState: ObservableObject {
             meta.autoLockTimeoutSeconds = seconds
             vaultMeta = meta
         }
-    }
-
-    // MARK: - Legacy meta (two-file format)
-    // Only used for old vaults before single-file migration.
-
-    private func saveMeta(_ meta: VaultMeta) throws {
-        let data = try JSONEncoder().encode(meta)
-        try data.write(to: metaURL, options: [.atomic])
-    }
-
-    func setVaultMeta(_ newMeta: VaultMeta) throws {
-        try saveMeta(newMeta)
-        self.vaultMeta = newMeta
     }
 
     // MARK: - Change master password
@@ -541,55 +420,5 @@ final class AppState: ObservableObject {
     
     private var vaultURL: URL {
         baseDir.appendingPathComponent("Diary.vault")
-    }
-
-    // Keep these only for migration:
-    private var entriesURL: URL {
-        baseDir.appendingPathComponent("entries.bin")
-    }
-    private var metaURL: URL {
-        baseDir.appendingPathComponent("vault_meta.json")
-    }
-    func migrateToSingleFileVaultIfNeeded() {
-        // If new vault already exists, do nothing
-        if fileManager.fileExists(atPath: vaultURL.path) {
-            return
-        }
-        
-        // Only migrate if we're unlocked and have currentKey + entries
-        guard
-            mode == .unlocked,
-            let key = currentKey,
-            let store = journalStore,
-            let meta = vaultMeta
-        else {
-            return
-        }
-        
-        do {
-            // Build header from existing meta
-            let header = VaultHeader(
-                schemaVersion: meta.schemaVersion,
-                saltBase64: meta.saltBase64,
-                iterations: meta.iterations
-            )
-            
-            // Encrypt current entries with existing key
-            let data = try JSONEncoder().encode(store.entries)
-            let crypto = CryptoManager(key: key)
-            let ciphertext = try crypto.encrypt(data)
-            
-            // Write new single vault file
-            try VaultFile.write(to: vaultURL, header: header, ciphertext: ciphertext)
-            
-            print("Migration to single-file vault completed.")
-            
-            // Optionally delete old files *after* you're comfortable
-            // try? fileManager.removeItem(at: entriesURL)
-            // try? fileManager.removeItem(at: metaURL)
-            
-        } catch {
-            print("Migration to single-file vault failed:", error)
-        }
     }
 }

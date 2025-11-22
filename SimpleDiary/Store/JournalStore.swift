@@ -1,32 +1,18 @@
 
 import Foundation
 import Combine
+import CryptoKit
 
-/// Stores encrypted journal entries on disk.
+/// Stores encrypted journal entries on disk, using a provided symmetric key.
 final class JournalStore: ObservableObject {
     @Published var entries: [JournalEntry] = []
 
     private let crypto: CryptoManager
     private let fileURL: URL
 
-    init() throws {
-        let key = try KeychainManager.shared.loadOrCreateKey()
+    init(key: SymmetricKey, baseDir: URL) throws {
         self.crypto = CryptoManager(key: key)
-
-        let fm = FileManager.default
-        let appSupport = try fm.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        ).appendingPathComponent("DiaryApp", isDirectory: true)
-
-        if !fm.fileExists(atPath: appSupport.path) {
-            try fm.createDirectory(at: appSupport, withIntermediateDirectories: true)
-        }
-
-        self.fileURL = appSupport.appendingPathComponent("entries.bin")
-
+        self.fileURL = baseDir.appendingPathComponent("entries.bin")
         try load()
     }
 

@@ -23,7 +23,8 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var showingChangePassword = false
-    
+    @State private var showingForceReset = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
@@ -72,6 +73,15 @@ struct SettingsView: View {
             }
             .padding(.top, 4)
             
+#if DEBUG
+            Button("Force reset master password…") {
+                showingForceReset = true
+            }
+            .font(.caption)
+            .foregroundColor(.red)
+            .help("Use only if you are already unlocked (e.g. via Touch ID) and the old password is not recognised.")
+#endif
+
             Text("Biometrics are optional convenience. Your master password remains the ultimate key to decrypt the journal.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -82,6 +92,10 @@ struct SettingsView: View {
         .frame(width: 380, height: 260)
         .sheet(isPresented: $showingChangePassword) {
             ChangePasswordView()
+                .environmentObject(appState)
+        }
+        .sheet(isPresented: $showingForceReset) {
+            ForceResetPasswordView()
                 .environmentObject(appState)
         }
     }

@@ -265,6 +265,59 @@ final class AppState: ObservableObject {
             }
         }
     }
+
+    /// Force-set a new master password while the vault is already unlocked.
+    /// This does NOT verify the old password. Use only if you are already in
+    /// (e.g. via biometrics) and the password path is broken.
+    func forceSetNewMasterPassword(newPassword: String) throws {
+        guard mode == .unlocked else {
+            throw NSError(domain: "VaultError", code: -10,
+                          userInfo: [NSLocalizedDescriptionKey: "Vault must be unlocked to reset password."])
+        }
+        guard let store = journalStore, let meta = vaultMeta else {
+            throw NSError(domain: "VaultError", code: -11,
+                          userInfo: [NSLocalizedDescriptionKey: "Vault not initialised."])
+        }
+        
+        // 1) Generate new salt and derive new key from the NEW password
+        let newSalt = try RandomBytes.generate(count: 32)
+        let newIterations = meta.iterations  // keep same iteration count
+        let newKeyData = try PBKDF2.deriveKey(
+            password: newPassword,
+            salt: newSalt,
+            iterations: newIterations,
+            keyLength: 32
+        )
+        let newKey = SymmetricKey(data: newKeyData)
+        
+        // 2) Re-encrypt current in-memory entries with the new key
+        let crypto = CryptoManager(key: newKey)
+        let data = try JSONEncoder().encode(store.entries)
+        let encrypted = try crypto.encrypt(data)
+        try encrypted.write(to: entriesURL, options: [.atomic])
+        
+        // 3) Update vault meta (salt, iterations stay; schemaVersion stays)
+        var updatedMeta = meta
+        updatedMeta.saltBase64 = newSalt.base64EncodedString()
+        updatedMeta.iterations = newIterations
+        try saveMeta(updatedMeta)
+        self.vaultMeta = updatedMeta
+        
+        // 4) Update in-memory key + store
+        self.currentKey = newKey
+        let newStore = try JournalStore(key: newKey, baseDir: baseDir)
+        newStore.entries = store.entries
+        self.journalStore = newStore
+        
+        // 5) If biometrics are enabled, refresh cached key in Keychain
+        if updatedMeta.biometricsEnabled {
+            do {
+                try biometricManager.storeKey(newKey)
+            } catch {
+                print("Warning: failed to refresh biometric key after force password reset:", error)
+            }
+        }
+    }
     
     // MARK: - Activity / idle lock
     

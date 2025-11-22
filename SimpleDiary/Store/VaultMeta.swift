@@ -5,7 +5,9 @@ struct VaultMeta: Codable {
     var saltBase64: String
     var iterations: Int
     var biometricsEnabled: Bool
-    
-    /// Idle auto-lock timeout in seconds. 0 or negative = disabled.
     var autoLockTimeoutSeconds: Int?
+
+    /// Version of the vault format / crypto scheme.
+    /// Start at 1; bump when you change how the vault is encrypted or encoded.
+    var schemaVersion: Int
 }

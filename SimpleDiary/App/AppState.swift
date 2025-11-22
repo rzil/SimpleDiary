@@ -77,7 +77,8 @@ final class AppState: ObservableObject {
                 saltBase64: salt.base64EncodedString(),
                 iterations: iterations,
                 biometricsEnabled: false,
-                autoLockTimeoutSeconds: 5 * 60
+                autoLockTimeoutSeconds: 5 * 60,
+                schemaVersion: 1
             )
             try saveMeta(meta)
             self.vaultMeta = meta

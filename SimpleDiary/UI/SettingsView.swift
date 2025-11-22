@@ -37,6 +37,7 @@ struct SettingsView: View {
                 .keyboardShortcut(.defaultAction)
             }
             
+            // Biometrics toggle
             Toggle(
                 "Enable Touch ID / biometrics unlock",
                 isOn: Binding(
@@ -47,22 +48,19 @@ struct SettingsView: View {
                 )
             )
             
-            Picker("Auto-lock when idle", selection: Binding<AutoLockOption>(
-                get: {
-                    let seconds = appState.vaultMeta?.autoLockTimeoutSeconds ?? (5 * 60)
-                    // Map seconds to nearest option
-                    return AutoLockOption(rawValue: seconds) ?? .fiveMinutes
-                },
-                set: { newValue in
-                    guard var meta = appState.vaultMeta else { return }
-                    meta.autoLockTimeoutSeconds = newValue.rawValue
-                    do {
-                        try appState.setVaultMeta(meta)
-                    } catch {
-                        print("Failed to update auto-lock setting:", error)
+            // Auto-lock picker
+            Picker(
+                "Auto-lock when idle",
+                selection: Binding<AutoLockOption>(
+                    get: {
+                        let seconds = appState.vaultMeta?.autoLockTimeoutSeconds ?? (5 * 60)
+                        return AutoLockOption(rawValue: seconds) ?? .fiveMinutes
+                    },
+                    set: { newValue in
+                        appState.updateAutoLockTimeout(seconds: newValue.rawValue)
                     }
-                }
-            )) {
+                )
+            ) {
                 ForEach(AutoLockOption.allCases) { option in
                     Text(option.label).tag(option)
                 }
@@ -73,14 +71,14 @@ struct SettingsView: View {
             }
             .padding(.top, 4)
             
-#if DEBUG
+            #if DEBUG
             Button("Force reset master password…") {
                 showingForceReset = true
             }
             .font(.caption)
             .foregroundColor(.red)
             .help("Use only if you are already unlocked (e.g. via Touch ID) and the old password is not recognised.")
-#endif
+            #endif
 
             Text("Biometrics are optional convenience. Your master password remains the ultimate key to decrypt the journal.")
                 .font(.caption)

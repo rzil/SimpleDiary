@@ -1,6 +1,3 @@
-
-import Foundation
-
 import Foundation
 
 struct VaultMeta: Codable {

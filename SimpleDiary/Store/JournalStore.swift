@@ -8,58 +8,66 @@ import SwiftUI
 final class JournalStore: ObservableObject {
     @Published var entries: [JournalEntry] = []
     
-    private let crypto: CryptoManager
-    private let fileURL: URL
+    private let key: SymmetricKey
+    private let vaultURL: URL
+    private var header: VaultHeader
     
-    init(key: SymmetricKey, baseDir: URL) throws {
-        self.crypto = CryptoManager(key: key)
-        self.fileURL = baseDir.appendingPathComponent("entries.bin")
-        try load()
+    init(key: SymmetricKey, vaultURL: URL, header: VaultHeader) {
+        self.key = key
+        self.vaultURL = vaultURL
+        self.header = header
     }
     
-    func load() throws {
-        let fm = FileManager.default
-        guard fm.fileExists(atPath: fileURL.path) else {
-            entries = []
-            return
-        }
+    /// Convenience init: given a key and vaultURL, read file, decrypt, and populate entries.
+    convenience init(unlockingWith key: SymmetricKey, vaultURL: URL) throws {
+        // Read header + ciphertext from the single vault file
+        let (header, ciphertext) = try VaultFile.read(from: vaultURL)
         
-        let encryptedData = try Data(contentsOf: fileURL)
-        let decrypted = try crypto.decrypt(encryptedData)
-        entries = try JSONDecoder().decode([JournalEntry].self, from: decrypted)
+        // Create base instance
+        self.init(key: key, vaultURL: vaultURL, header: header)
+        
+        // Decrypt & decode entries
+        let crypto = CryptoManager(key: key)
+        let plaintext = try crypto.decrypt(ciphertext)
+        let decoded = try JSONDecoder().decode([JournalEntry].self, from: plaintext)
+        
+        self.entries = decoded
     }
     
+    // Save using header + key to same vault file
     func save() {
-        let entriesSnapshot = entries
-        let url = fileURL
-        let crypto = self.crypto
-        
-        DispatchQueue.global(qos: .utility).async {
-            do {
-                let data = try JSONEncoder().encode(entriesSnapshot)
-                let encrypted = try crypto.encrypt(data)
-                try encrypted.write(to: url, options: [.atomic])
-            } catch {
-                print("Failed to save journal:", error)
-            }
+        do {
+            let data = try JSONEncoder().encode(entries)
+            let crypto = CryptoManager(key: key)
+            let ciphertext = try crypto.encrypt(data)
+            try VaultFile.write(to: vaultURL, header: header, ciphertext: ciphertext)
+        } catch {
+            print("Failed to save journal:", error)
         }
     }
 
-    @discardableResult
+    func loadFromVaultFile() throws {
+        let (header, ciphertext) = try VaultFile.read(from: vaultURL)
+        self.header = header
+
+        let crypto = CryptoManager(key: key)
+        let plaintext = try crypto.decrypt(ciphertext)
+        let decoded = try JSONDecoder().decode([JournalEntry].self, from: plaintext)
+        self.entries = decoded
+    }
+
     func addEntry() -> JournalEntry {
-        let entry = JournalEntry()
+        let entry = JournalEntry(
+            id: UUID(),
+            date: Date(),
+            title: "",
+            body: ""
+        )
         entries.insert(entry, at: 0)
         save()
         return entry
     }
     
-    func updateEntry(_ entry: JournalEntry) {
-        if let idx = entries.firstIndex(where: { $0.id == entry.id }) {
-            entries[idx] = entry
-            save()
-        }
-    }
-
     func deleteEntries(at offsets: IndexSet) {
         entries.remove(atOffsets: offsets)
         save()

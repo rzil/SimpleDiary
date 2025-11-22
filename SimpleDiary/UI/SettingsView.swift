@@ -24,7 +24,7 @@ struct SettingsView: View {
     
     @State private var showingChangePassword = false
     @State private var showingForceReset = false
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
@@ -66,20 +66,26 @@ struct SettingsView: View {
                 }
             }
             
+            Button("Show vault file in Finder…") {
+                revealVaultInFinder()
+            }
+            .disabled(!FileManager.default.fileExists(atPath: appState.vaultURL.path))
+            .help("Reveals the encrypted vault file in Finder. Don’t delete it unless you have a backup.")
+            
             Button("Change master password…") {
                 showingChangePassword = true
             }
             .padding(.top, 4)
             
-            #if DEBUG
+#if DEBUG
             Button("Force reset master password…") {
                 showingForceReset = true
             }
             .font(.caption)
             .foregroundColor(.red)
             .help("Use only if you are already unlocked (e.g. via Touch ID) and the old password is not recognised.")
-            #endif
-
+#endif
+            
             Text("Biometrics are optional convenience. Your master password remains the ultimate key to decrypt the journal.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -87,7 +93,7 @@ struct SettingsView: View {
             Spacer()
         }
         .padding()
-        .frame(width: 380, height: 260)
+        .frame(width: 380, height: 320)
         .sheet(isPresented: $showingChangePassword) {
             ChangePasswordView()
                 .environmentObject(appState)
@@ -96,5 +102,10 @@ struct SettingsView: View {
             ForceResetPasswordView()
                 .environmentObject(appState)
         }
+    }
+    
+    private func revealVaultInFinder() {
+        let url = appState.vaultURL
+        NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 }

@@ -17,6 +17,11 @@ struct AppMenuCommands: Commands {
             }
             .keyboardShortcut("L", modifiers: .command)
             .disabled(appState.mode != .unlocked)
+
+            Button("Show Vault in Finder") {
+                NSWorkspace.shared.activateFileViewerSelecting([appState.vaultURL])
+            }
+            .disabled(!FileManager.default.fileExists(atPath: appState.vaultURL.path))
         }
     }
 }

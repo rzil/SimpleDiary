@@ -30,15 +30,21 @@ final class JournalStore: ObservableObject {
     }
     
     func save() {
-        do {
-            let data = try JSONEncoder().encode(entries)
-            let encrypted = try crypto.encrypt(data)
-            try encrypted.write(to: fileURL, options: [.atomic])
-        } catch {
-            print("Failed to save journal:", error)
+        let entriesSnapshot = entries
+        let url = fileURL
+        let crypto = self.crypto
+        
+        DispatchQueue.global(qos: .utility).async {
+            do {
+                let data = try JSONEncoder().encode(entriesSnapshot)
+                let encrypted = try crypto.encrypt(data)
+                try encrypted.write(to: url, options: [.atomic])
+            } catch {
+                print("Failed to save journal:", error)
+            }
         }
     }
-    
+
     @discardableResult
     func addEntry() -> JournalEntry {
         let entry = JournalEntry()

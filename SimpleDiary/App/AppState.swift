@@ -23,6 +23,8 @@ final class AppState: ObservableObject {
     
     private let biometricManager = BiometricKeychainManager()
     
+    private var saveWorkItem: DispatchWorkItem?
+    
     init() {
         let appSupport = try! fileManager.url(
             for: .applicationSupportDirectory,
@@ -42,11 +44,11 @@ final class AppState: ObservableObject {
         if fileManager.fileExists(atPath: vaultURL.path) {
             do {
                 let (header, _) = try VaultFile.read(from: vaultURL)
-
+                
                 let biometricsEnabled = UserDefaults.standard.bool(forKey: "biometricsEnabled")
                 let autoLock = UserDefaults.standard.integer(forKey: "autoLockTimeoutSeconds")
                 let timeout = autoLock > 0 ? autoLock : (5 * 60)
-
+                
                 self.vaultMeta = VaultMeta(
                     saltBase64: header.saltBase64,
                     iterations: header.iterations,
@@ -63,7 +65,7 @@ final class AppState: ObservableObject {
             self.mode = .needsSetup
         }
     }
-
+    
     private func completeUnlock(with key: SymmetricKey) throws {
         let store = try JournalStore(unlockingWith: key, vaultURL: vaultURL)
         
@@ -86,7 +88,7 @@ final class AppState: ObservableObject {
         self.mode = .unlocked
         self.noteActivity()
     }
-
+    
     // MARK: - Setup
     
     func setupVault(password: String) {
@@ -145,7 +147,7 @@ final class AppState: ObservableObject {
     }
     
     // MARK: - Unlock
-
+    
     func unlockWithPassword(_ password: String) {
         do {
             let (header, _) = try VaultFile.read(from: vaultURL)
@@ -153,7 +155,7 @@ final class AppState: ObservableObject {
                 throw NSError(domain: "VaultError", code: -1,
                               userInfo: [NSLocalizedDescriptionKey: "Invalid salt in header"])
             }
-
+            
             let keyData = try PBKDF2.deriveKey(
                 password: password,
                 salt: salt,
@@ -161,7 +163,7 @@ final class AppState: ObservableObject {
                 keyLength: 32
             )
             let key = SymmetricKey(data: keyData)
-
+            
             try completeUnlock(with: key)
         } catch CryptoKit.CryptoKitError.authenticationFailure {
             print("Unlock failed: wrong password or corrupted vault")
@@ -169,10 +171,10 @@ final class AppState: ObservableObject {
             print("Unlock failed:", error)
         }
     }
-
+    
     func unlockWithBiometrics() {
         guard vaultMeta?.biometricsEnabled ?? false else { return }
-
+        
         biometricManager.loadKeyWithBiometrics { [weak self] result in
             Task { @MainActor in
                 guard let self else { return }
@@ -189,7 +191,7 @@ final class AppState: ObservableObject {
             }
         }
     }
-
+    
     func lock() {
         currentKey = nil
         journalStore = nil
@@ -224,9 +226,9 @@ final class AppState: ObservableObject {
             }
         }
     }
-
+    
     // MARK: - Auto-lock settings
-
+    
     func updateAutoLockTimeout(seconds: Int) {
         UserDefaults.standard.set(seconds, forKey: "autoLockTimeoutSeconds")
         if var meta = vaultMeta {
@@ -234,7 +236,7 @@ final class AppState: ObservableObject {
             vaultMeta = meta
         }
     }
-
+    
     // MARK: - Change master password
     
     func changePassword(currentPassword: String, newPassword: String) throws {
@@ -420,5 +422,30 @@ final class AppState: ObservableObject {
     
     private var vaultURL: URL {
         baseDir.appendingPathComponent("Diary.vault")
+    }
+    
+    // MARK: - Saving
+    
+    /// Schedule a debounced save of the current entries.
+    func scheduleSave() {
+        guard let store = journalStore else { return }
+        
+        // Any change is activity
+        noteActivity()
+        
+        // Cancel previous pending save
+        saveWorkItem?.cancel()
+        
+        let workItem = DispatchWorkItem {
+            // Do the heavy work off the main thread
+            DispatchQueue.global(qos: .utility).async {
+                store.save()
+            }
+        }
+        
+        saveWorkItem = workItem
+        
+        // Save after 0.7s of no further edits
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7, execute: workItem)
     }
 }

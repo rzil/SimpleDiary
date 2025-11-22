@@ -21,21 +21,27 @@ struct JournalRootView: View {
                     .tag(entry.id)
                 }
                 .onDelete { indexSet in
-                    // If we're deleting the selected entry, clear selection
+                    // Clear selection if we delete the selected entry
                     if let selectedID = selectedID {
                         let idsBeingDeleted = indexSet.map { store.entries[$0].id }
                         if idsBeingDeleted.contains(selectedID) {
                             self.selectedID = nil
                         }
                     }
+                    
                     store.deleteEntries(at: indexSet)
+                    appState.noteActivity()
                 }
+            }
+            .onChange(of: selectedID) { _ in
+                appState.noteActivity()
             }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         let new = store.addEntry()
                         selectedID = new.id
+                        appState.noteActivity()
                     } label: {
                         Label("New Entry", systemImage: "square.and.pencil")
                     }
@@ -63,8 +69,9 @@ struct JournalRootView: View {
                     Button {
                         appState.lock()
                     } label: {
-                        Image(systemName: "lock.fill")
+                        Label("Lock", systemImage: "lock.fill")
                     }
+                    .keyboardShortcut("L", modifiers: .command)
                 }
             }
         } detail: {

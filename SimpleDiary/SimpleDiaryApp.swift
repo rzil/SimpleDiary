@@ -23,7 +23,8 @@ struct SimpleDiaryApp: App {
 
 struct RootView: View {
     @EnvironmentObject var appState: AppState
-
+    @Environment(\.scenePhase) private var scenePhase
+    
     var body: some View {
         Group {
             switch appState.mode {
@@ -44,6 +45,16 @@ struct RootView: View {
                     Text("Error: No store")
                 }
             }
+        }
+        .onChange(of: scenePhase) { newPhase in
+            if newPhase != .active {
+                appState.lock()
+            }
+        }
+        .onReceive(
+            Timer.publish(every: 30, on: .main, in: .common).autoconnect()
+        ) { _ in
+            appState.checkIdleLock(timeout: 5 * 60) // 5 min idle
         }
     }
 }

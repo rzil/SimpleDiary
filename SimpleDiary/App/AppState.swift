@@ -14,7 +14,8 @@ final class AppState: ObservableObject {
     @Published var mode: Mode = .initializing
     @Published var vaultMeta: VaultMeta?
     @Published var journalStore: JournalStore?
-    
+    @Published var lastActivity: Date? = nil
+
     private(set) var currentKey: SymmetricKey?
     
     private let fileManager = FileManager.default
@@ -83,6 +84,7 @@ final class AppState: ObservableObject {
             let store = try JournalStore(key: key, baseDir: baseDir)
             self.journalStore = store
             self.mode = .unlocked
+            self.noteActivity()
         } catch {
             print("Failed to setup vault:", error)
             self.mode = .needsSetup
@@ -112,6 +114,7 @@ final class AppState: ObservableObject {
             self.currentKey = key
             self.journalStore = store
             self.mode = .unlocked
+            self.noteActivity()
         } catch {
             print("Unlock failed:", error)
             // Could expose an error message via @Published if you want
@@ -131,6 +134,7 @@ final class AppState: ObservableObject {
                         self.currentKey = key
                         self.journalStore = store
                         self.mode = .unlocked
+                        self.noteActivity()
                     } catch {
                         print("Biometric unlock failed:", error)
                     }
@@ -253,6 +257,20 @@ final class AppState: ObservableObject {
             } catch {
                 print("Warning: failed to update biometric key after password change:", error)
             }
+        }
+    }
+
+    // MARK: - Activity / idle lock
+    
+    func noteActivity() {
+        lastActivity = Date()
+    }
+    
+    func checkIdleLock(timeout: TimeInterval = 5 * 60) { // 5 minutes
+        guard mode == .unlocked else { return }
+        guard let last = lastActivity else { return }
+        if Date().timeIntervalSince(last) > timeout {
+            lock()
         }
     }
 }

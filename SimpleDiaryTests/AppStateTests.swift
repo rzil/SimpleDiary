@@ -22,7 +22,6 @@ final class AppStateTests: XCTestCase {
         AppState(baseDir: dir, biometricManager: NoopBiometricKeyManager())
     }
     
-    
     func testSetupAndUnlockRoundTrip() async throws {
         let tempDir = makeTempDir()
         

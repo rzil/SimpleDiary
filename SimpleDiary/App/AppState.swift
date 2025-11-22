@@ -2,6 +2,14 @@ import Combine
 import Foundation
 import CryptoKit
 
+protocol BiometricKeychainManaging {
+    func storeKey(_ key: SymmetricKey) throws
+    func loadKeyWithBiometrics(
+        completion: @escaping (Result<SymmetricKey, Swift.Error>) -> Void
+    )
+    func deleteKey() throws
+}
+
 @MainActor
 final class AppState: ObservableObject {
     enum Mode {
@@ -21,25 +29,38 @@ final class AppState: ObservableObject {
     private let fileManager = FileManager.default
     private let baseDir: URL
     
-    private let biometricManager = BiometricKeychainManager()
+    private let biometricManager: BiometricKeychainManaging
     
     private var saveWorkItem: DispatchWorkItem?
     
-    init() {
-        let appSupport = try! fileManager.url(
+    // MARK: - Designated init
+    
+    init(baseDir: URL, biometricManager: BiometricKeychainManaging) {
+        self.baseDir = baseDir
+        self.biometricManager = biometricManager
+    }
+    
+    // MARK: - Convenience init for the real app
+    
+    convenience init() {
+        let fm = FileManager.default
+        let appSupport = try! fm.url(
             for: .applicationSupportDirectory,
             in: .userDomainMask,
             appropriateFor: nil,
             create: true
         ).appendingPathComponent("DiaryApp", isDirectory: true)
         
-        if !fileManager.fileExists(atPath: appSupport.path) {
-            try? fileManager.createDirectory(at: appSupport, withIntermediateDirectories: true)
+        if !fm.fileExists(atPath: appSupport.path) {
+            try? fm.createDirectory(at: appSupport, withIntermediateDirectories: true)
         }
         
-        self.baseDir = appSupport
+        self.init(
+            baseDir: appSupport,
+            biometricManager: BiometricKeychainManager()
+        )
     }
-    
+
     func initialize() async {
         if fileManager.fileExists(atPath: vaultURL.path) {
             do {
@@ -420,7 +441,7 @@ final class AppState: ObservableObject {
         }
     }
     
-    private var vaultURL: URL {
+    internal var vaultURL: URL {
         baseDir.appendingPathComponent("Diary.vault")
     }
     

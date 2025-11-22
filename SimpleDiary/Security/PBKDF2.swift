@@ -15,6 +15,9 @@ enum PBKDF2 {
     }
     
     static func deriveKey(passwordData: Data, salt: Data, iterations: Int, keyLength: Int) throws -> Data {
+        precondition(iterations > 0, "PBKDF2: iterations must be > 0")
+        precondition(keyLength > 0, "PBKDF2: keyLength must be > 0")
+        
         let hLen = Int(SHA256.Digest.byteCount)
         let l = Int(ceil(Double(keyLength) / Double(hLen)))
         let r = keyLength - (l - 1) * hLen
@@ -55,12 +58,10 @@ enum PBKDF2 {
     }
     
     private static func xorData(_ a: Data, _ b: Data) -> Data {
-        let count = min(a.count, b.count)
-        var result = Data(count: count)
-        
-        for i in 0..<count {
-            let byte = a[i] ^ b[i]
-            result[i] = byte
+        precondition(a.count == b.count, "xorData: buffers must be same length")
+        var result = Data(count: a.count)
+        for i in 0..<a.count {
+            result[i] = a[i] ^ b[i]
         }
         return result
     }

@@ -1,0 +1,38 @@
+{
+  "configurations" : [
+    {
+      "id" : "49C68C63-B24F-48B1-B705-F7C36BAFB422",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:SimpleDiary.xcodeproj",
+      "identifier" : "778F9E532ED1700500FBC1F1",
+      "name" : "SimpleDiary"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:SimpleDiary.xcodeproj",
+        "identifier" : "778F9E602ED1700600FBC1F1",
+        "name" : "SimpleDiaryTests"
+      }
+    },
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:SimpleDiary.xcodeproj",
+        "identifier" : "778F9E6A2ED1700600FBC1F1",
+        "name" : "SimpleDiaryUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

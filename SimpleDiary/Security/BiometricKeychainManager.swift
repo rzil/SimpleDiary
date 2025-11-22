@@ -6,7 +6,7 @@ import Security
 /// Stores the derived vault key in the Keychain.
 /// Biometrics are enforced by the app (via LocalAuthentication)
 /// before we ever read this key.
-final class BiometricKeychainManager {
+final class BiometricKeychainManager: BiometricKeychainManaging {
     private let service = "DiaryApp"
     private let account = "vault-key"
     

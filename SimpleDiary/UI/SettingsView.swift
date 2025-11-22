@@ -4,6 +4,8 @@ struct SettingsView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) private var dismiss
     
+    @State private var showingChangePassword = false
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
@@ -26,6 +28,11 @@ struct SettingsView: View {
                 )
             )
             
+            Button("Change master password…") {
+                showingChangePassword = true
+            }
+            .padding(.top, 4)
+            
             Text("Biometrics are optional convenience. Your master password remains the ultimate key to decrypt the journal.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -33,6 +40,10 @@ struct SettingsView: View {
             Spacer()
         }
         .padding()
-        .frame(width: 380, height: 200)
+        .frame(width: 380, height: 220)
+        .sheet(isPresented: $showingChangePassword) {
+            ChangePasswordView()
+                .environmentObject(appState)
+        }
     }
 }

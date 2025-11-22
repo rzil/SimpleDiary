@@ -10,20 +10,20 @@ final class AppState: ObservableObject {
         case locked
         case unlocked
     }
-
+    
     @Published var mode: Mode = .initializing
     @Published var vaultMeta: VaultMeta?
     @Published var journalStore: JournalStore?
-
+    
     private(set) var currentKey: SymmetricKey?
-
+    
     private let fileManager = FileManager.default
     private let baseDir: URL
     let metaURL: URL
     let entriesURL: URL
-
+    
     private let biometricManager = BiometricKeychainManager()
-
+    
     init() {
         let appSupport = try! fileManager.url(
             for: .applicationSupportDirectory,
@@ -31,16 +31,16 @@ final class AppState: ObservableObject {
             appropriateFor: nil,
             create: true
         ).appendingPathComponent("DiaryApp", isDirectory: true)
-
+        
         if !fileManager.fileExists(atPath: appSupport.path) {
             try? fileManager.createDirectory(at: appSupport, withIntermediateDirectories: true)
         }
-
+        
         self.baseDir = appSupport
         self.metaURL = appSupport.appendingPathComponent("vault_meta.json")
         self.entriesURL = appSupport.appendingPathComponent("entries.bin")
     }
-
+    
     func initialize() async {
         if fileManager.fileExists(atPath: metaURL.path) {
             do {
@@ -56,9 +56,9 @@ final class AppState: ObservableObject {
             self.mode = .needsSetup
         }
     }
-
+    
     // MARK: - Setup
-
+    
     func setupVault(password: String) {
         do {
             let salt = try RandomBytes.generate(count: 32)
@@ -71,7 +71,7 @@ final class AppState: ObservableObject {
             )
             let key = SymmetricKey(data: keyData)
             self.currentKey = key
-
+            
             let meta = VaultMeta(
                 saltBase64: salt.base64EncodedString(),
                 iterations: iterations,
@@ -79,7 +79,7 @@ final class AppState: ObservableObject {
             )
             try saveMeta(meta)
             self.vaultMeta = meta
-
+            
             let store = try JournalStore(key: key, baseDir: baseDir)
             self.journalStore = store
             self.mode = .unlocked
@@ -88,9 +88,9 @@ final class AppState: ObservableObject {
             self.mode = .needsSetup
         }
     }
-
+    
     // MARK: - Unlock
-
+    
     func unlockWithPassword(_ password: String) {
         guard let meta = vaultMeta else { return }
         do {
@@ -104,11 +104,11 @@ final class AppState: ObservableObject {
                 keyLength: 32
             )
             let key = SymmetricKey(data: keyData)
-
+            
             let store = try JournalStore(key: key, baseDir: baseDir)
             // Try loading to ensure key is correct
             try store.load()
-
+            
             self.currentKey = key
             self.journalStore = store
             self.mode = .unlocked
@@ -117,7 +117,7 @@ final class AppState: ObservableObject {
             // Could expose an error message via @Published if you want
         }
     }
-
+    
     func unlockWithBiometrics() {
         guard let meta = vaultMeta, meta.biometricsEnabled else { return }
         biometricManager.loadKeyWithBiometrics { [weak self] result in
@@ -140,15 +140,15 @@ final class AppState: ObservableObject {
             }
         }
     }
-
+    
     func lock() {
         currentKey = nil
         journalStore = nil
         mode = .locked
     }
-
+    
     // MARK: - Biometrics settings
-
+    
     func setBiometricsEnabled(_ enabled: Bool) {
         guard var meta = vaultMeta else { return }
         if enabled {
@@ -172,11 +172,87 @@ final class AppState: ObservableObject {
             }
         }
     }
-
+    
     // MARK: - Meta
-
+    
     private func saveMeta(_ meta: VaultMeta) throws {
         let data = try JSONEncoder().encode(meta)
         try data.write(to: metaURL, options: [.atomic])
+    }
+    
+    // MARK: - Change master password
+    
+    func changePassword(currentPassword: String, newPassword: String) throws {
+        guard let meta = vaultMeta else {
+            throw NSError(domain: "VaultError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Vault not initialized"])
+        }
+        guard let store = journalStore else {
+            throw NSError(domain: "VaultError", code: -2, userInfo: [NSLocalizedDescriptionKey: "Vault must be unlocked to change password"])
+        }
+        
+        // 1. Derive key from current password and verify it matches currentKey
+        guard let saltData = Data(base64Encoded: meta.saltBase64) else {
+            throw NSError(domain: "VaultError", code: -3, userInfo: [NSLocalizedDescriptionKey: "Invalid salt in metadata"])
+        }
+        
+        let currentKeyData = try PBKDF2.deriveKey(
+            password: currentPassword,
+            salt: saltData,
+            iterations: meta.iterations,
+            keyLength: 32
+        )
+        let derivedCurrentKey = SymmetricKey(data: currentKeyData)
+        
+        if let existingKey = currentKey {
+            // Compare derived key with the one currently in use
+            let existingData = existingKey.withUnsafeBytes { Data($0) }
+            guard existingData == currentKeyData else {
+                throw NSError(domain: "VaultError", code: -4, userInfo: [NSLocalizedDescriptionKey: "Current password is incorrect"])
+            }
+        } else {
+            // No currentKey set (shouldn't happen if we're unlocked), so sanity check by trying to decrypt
+            let testStore = try JournalStore(key: derivedCurrentKey, baseDir: baseDir)
+            try testStore.load() // will throw if wrong
+        }
+        
+        // 2. Derive new key from new password, with fresh salt
+        let newSalt = try RandomBytes.generate(count: 32)
+        let newIterations = meta.iterations  // or bump this if you like
+        let newKeyData = try PBKDF2.deriveKey(
+            password: newPassword,
+            salt: newSalt,
+            iterations: newIterations,
+            keyLength: 32
+        )
+        let newKey = SymmetricKey(data: newKeyData)
+        
+        // 3. Re-encrypt the existing entries with the new key
+        let crypto = CryptoManager(key: newKey)
+        let data = try JSONEncoder().encode(store.entries)
+        let encrypted = try crypto.encrypt(data)
+        try encrypted.write(to: entriesURL, options: [.atomic])
+        
+        // 4. Update meta (salt, iterations) and save
+        var updatedMeta = meta
+        updatedMeta.saltBase64 = newSalt.base64EncodedString()
+        updatedMeta.iterations = newIterations
+        try saveMeta(updatedMeta)
+        self.vaultMeta = updatedMeta
+        
+        // 5. Update in-memory key and store
+        self.currentKey = newKey
+        // Recreate the JournalStore with the new key so future saves use it
+        let newStore = try JournalStore(key: newKey, baseDir: baseDir)
+        self.journalStore = newStore
+        newStore.entries = store.entries  // copy entries into the new store
+        
+        // 6. If biometrics are enabled, refresh the cached key in Keychain
+        if updatedMeta.biometricsEnabled {
+            do {
+                try biometricManager.storeKey(newKey)
+            } catch {
+                print("Warning: failed to update biometric key after password change:", error)
+            }
+        }
     }
 }

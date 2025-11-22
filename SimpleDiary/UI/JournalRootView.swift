@@ -20,6 +20,16 @@ struct JournalRootView: View {
                     }
                     .tag(entry.id)
                 }
+                .onDelete { indexSet in
+                    // If we're deleting the selected entry, clear selection
+                    if let selectedID = selectedID {
+                        let idsBeingDeleted = indexSet.map { store.entries[$0].id }
+                        if idsBeingDeleted.contains(selectedID) {
+                            self.selectedID = nil
+                        }
+                    }
+                    store.deleteEntries(at: indexSet)
+                }
             }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
@@ -29,6 +39,18 @@ struct JournalRootView: View {
                     } label: {
                         Label("New Entry", systemImage: "square.and.pencil")
                     }
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        if let id = selectedID,
+                           let idx = store.entries.firstIndex(where: { $0.id == id }) {
+                            store.deleteEntries(at: IndexSet(integer: idx))
+                            selectedID = nil
+                        }
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                    .disabled(selectedID == nil)
                 }
                 ToolbarItem(placement: .navigation) {
                     Button {

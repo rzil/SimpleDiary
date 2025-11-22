@@ -47,6 +47,14 @@ final class AppState: ObservableObject {
             do {
                 let data = try Data(contentsOf: metaURL)
                 let meta = try JSONDecoder().decode(VaultMeta.self, from: data)
+                
+                // Basic sanity / future hook
+                if meta.schemaVersion > 1 {
+                    // In future, you can handle migrations or show an upgrade-needed UI here.
+                    print("Vault schema version \(meta.schemaVersion) is newer than this app supports.")
+                    // For now we still allow trying to unlock; or you could bail out.
+                }
+                
                 self.vaultMeta = meta
                 self.mode = .locked
             } catch {
@@ -57,7 +65,7 @@ final class AppState: ObservableObject {
             self.mode = .needsSetup
         }
     }
-    
+
     // MARK: - Setup
     
     func setupVault(password: String) {

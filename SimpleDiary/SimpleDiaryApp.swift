@@ -9,15 +9,18 @@ import Combine
 import SwiftUI
 
 @main
-struct SimpleDiaryApp: App {
+struct DiaryApp: App {
     @StateObject private var appState = AppState()
-
+    
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(appState)
         }
         .windowStyle(.titleBar)
+        .commands {
+            AppMenuCommands(appState: appState)
+        }
     }
 }
 

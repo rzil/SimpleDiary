@@ -72,6 +72,7 @@ struct JournalRootView: View {
                         Label("Lock", systemImage: "lock.fill")
                     }
                     .keyboardShortcut("L", modifiers: .command)
+                    .help("Lock (⌘L)")
                 }
             }
         } detail: {

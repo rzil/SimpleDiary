@@ -1,0 +1,69 @@
+
+import Foundation
+import Combine
+
+/// Stores encrypted journal entries on disk.
+final class JournalStore: ObservableObject {
+    @Published var entries: [JournalEntry] = []
+
+    private let crypto: CryptoManager
+    private let fileURL: URL
+
+    init() throws {
+        let key = try KeychainManager.shared.loadOrCreateKey()
+        self.crypto = CryptoManager(key: key)
+
+        let fm = FileManager.default
+        let appSupport = try fm.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        ).appendingPathComponent("DiaryApp", isDirectory: true)
+
+        if !fm.fileExists(atPath: appSupport.path) {
+            try fm.createDirectory(at: appSupport, withIntermediateDirectories: true)
+        }
+
+        self.fileURL = appSupport.appendingPathComponent("entries.bin")
+
+        try load()
+    }
+
+    func load() throws {
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: fileURL.path) else {
+            entries = []
+            return
+        }
+
+        let encryptedData = try Data(contentsOf: fileURL)
+        let decrypted = try crypto.decrypt(encryptedData)
+        entries = try JSONDecoder().decode([JournalEntry].self, from: decrypted)
+    }
+
+    func save() {
+        do {
+            let data = try JSONEncoder().encode(entries)
+            let encrypted = try crypto.encrypt(data)
+            try encrypted.write(to: fileURL, options: [.atomic])
+        } catch {
+            print("Failed to save journal:", error)
+        }
+    }
+
+    @discardableResult
+    func addEntry() -> JournalEntry {
+        let entry = JournalEntry()
+        entries.insert(entry, at: 0)
+        save()
+        return entry
+    }
+
+    func updateEntry(_ entry: JournalEntry) {
+        if let idx = entries.firstIndex(where: { $0.id == entry.id }) {
+            entries[idx] = entry
+            save()
+        }
+    }
+}

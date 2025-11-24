@@ -33,7 +33,7 @@ struct JournalRootView: View {
                     appState.noteActivity()
                 }
             }
-            .onChange(of: selectedID) { _ in
+            .onChange(of: selectedID) {
                 appState.noteActivity()
             }
             .toolbar {
@@ -45,6 +45,8 @@ struct JournalRootView: View {
                     } label: {
                         Label("New Entry", systemImage: "square.and.pencil")
                     }
+                    .keyboardShortcut("N", modifiers: .command)
+                    .help("New Entry (⌘N)")
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button {

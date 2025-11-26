@@ -4,13 +4,21 @@ import SwiftUI
 struct JournalRootView: View {
     @EnvironmentObject var store: JournalStore
     @EnvironmentObject var appState: AppState
+    
     @State private var selectedID: JournalEntry.ID?
     @State private var showingSettings = false
+    @State private var sortNewestFirst = true   // NEW
 
     var body: some View {
         NavigationSplitView {
+            let entries = store.entries.sorted {
+                sortNewestFirst
+                    ? $0.date > $1.date
+                    : $0.date < $1.date
+            }
+            
             List(selection: $selectedID) {
-                ForEach(store.entries) { entry in
+                ForEach(entries) { entry in
                     VStack(alignment: .leading) {
                         Text(entry.title.isEmpty ? "Untitled" : entry.title)
                             .font(.headline)
@@ -26,15 +34,21 @@ struct JournalRootView: View {
                     .tag(entry.id)
                 }
                 .onDelete { indexSet in
-                    // Clear selection if we delete the selected entry
+                    // Must map visible indexSet back to original store.entries indexes
+                    let sortedIndices = indexSet.map { sortedIndex in
+                        store.entries.firstIndex(where: { $0.id == entries[sortedIndex].id })!
+                    }
+
+                    let indexSetReal = IndexSet(sortedIndices)
+                    
                     if let selectedID = selectedID {
-                        let idsBeingDeleted = indexSet.map { store.entries[$0].id }
+                        let idsBeingDeleted = indexSetReal.map { store.entries[$0].id }
                         if idsBeingDeleted.contains(selectedID) {
                             self.selectedID = nil
                         }
                     }
                     
-                    store.deleteEntries(at: indexSet)
+                    store.deleteEntries(at: indexSetReal)
                     appState.noteActivity()
                 }
             }
@@ -42,6 +56,7 @@ struct JournalRootView: View {
                 appState.noteActivity()
             }
             .toolbar {
+                // New Entry
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         let new = store.addEntry()
@@ -51,8 +66,9 @@ struct JournalRootView: View {
                         Label("New Entry", systemImage: "square.and.pencil")
                     }
                     .keyboardShortcut("N", modifiers: .command)
-                    .help("New Entry (⌘N)")
                 }
+                
+                // Delete
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         if let id = selectedID,
@@ -65,6 +81,18 @@ struct JournalRootView: View {
                     }
                     .disabled(selectedID == nil)
                 }
+
+                // 🔽 Sort toggle
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        sortNewestFirst.toggle()
+                    } label: {
+                        Image(systemName: sortNewestFirst ? "arrow.down" : "arrow.up")
+                    }
+                    .help(sortNewestFirst ? "Sort Oldest → Newest" : "Sort Newest → Oldest")
+                }
+
+                // Settings
                 ToolbarItem(placement: .navigation) {
                     Button {
                         showingSettings.toggle()
@@ -72,6 +100,8 @@ struct JournalRootView: View {
                         Image(systemName: "gearshape")
                     }
                 }
+
+                // Lock
                 ToolbarItem(placement: .cancellationAction) {
                     Button {
                         appState.lock()
@@ -79,7 +109,6 @@ struct JournalRootView: View {
                         Label("Lock", systemImage: "lock.fill")
                     }
                     .keyboardShortcut("L", modifiers: .command)
-                    .help("Lock (⌘L)")
                 }
             }
         } detail: {
@@ -91,8 +120,7 @@ struct JournalRootView: View {
             }
         }
         .sheet(isPresented: $showingSettings) {
-            SettingsView()
-                .environmentObject(appState)
+            SettingsView().environmentObject(appState)
         }
     }
 }

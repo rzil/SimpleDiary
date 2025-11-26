@@ -17,6 +17,11 @@ struct JournalRootView: View {
                         Text(entry.date.formatted(date: .abbreviated, time: .shortened))
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                        if let tag = entry.tag {
+                            Text(tag)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
                     .tag(entry.id)
                 }

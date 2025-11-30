@@ -270,12 +270,12 @@ private extension RichTextView {
                     if let sel = selectedRange {
                         let validRange = NSRange(location: 0, length: textView.string.count)
                         if NSLocationInRange(sel.location, validRange), NSLocationInRange(sel.location + sel.length, NSRange(location: 0, length: textView.string.count + 1)) {
-                            textView.setSelectedRange(sel)
+                            textView.setSelectedRangeNoDelegate(sel)
                         } else {
-                            textView.setSelectedRange(origSelectedRange)
+                            textView.setSelectedRangeNoDelegate(origSelectedRange)
                         }
                     } else {
-                        textView.setSelectedRange(origSelectedRange)
+                        textView.setSelectedRangeNoDelegate(origSelectedRange)
                     }
                 }
             } else {
@@ -283,7 +283,7 @@ private extension RichTextView {
                 if !textView.hasMarkedText() {
                     let origSelectedRange = textView.selectedRange()
                     updateText(textView, text: text, highlights: highlights, font: font)
-                    textView.setSelectedRange(origSelectedRange)
+                    textView.setSelectedRangeNoDelegate(origSelectedRange)
                 }
             }
 
@@ -292,7 +292,7 @@ private extension RichTextView {
                 if NSLocationInRange(sel.location, validRange), NSLocationInRange(sel.location + sel.length, NSRange(location: 0, length: textView.string.count + 1)) {
                     if !textView.hasMarkedText() {
                         if textView.selectedRange() != sel {
-                            textView.setSelectedRange(sel)
+                            textView.setSelectedRangeNoDelegate(sel)
                             scrollRangeToVisible(textView: textView, range: sel)
                         }
                     }
@@ -342,7 +342,7 @@ private extension RichTextView {
             if !textView.hasMarkedText() {
                 if textView.textStorage?.string != attrString.string || textView.attributedString() != attrString {
                     textView.textStorage?.setAttributedString(attrString)
-                    textView.setSelectedRange(origSelectedRange)
+                    textView.setSelectedRangeNoDelegate(origSelectedRange)
                 }
             }
         }
@@ -472,6 +472,13 @@ private extension NSTextView {
         // convert rect from text container coordinates to view coordinates
         let containerOrigin = self.textContainerOrigin
         return boundingRect.offsetBy(dx: containerOrigin.x, dy: containerOrigin.y)
+    }
+
+    func setSelectedRangeNoDelegate(_ charRange: NSRange) {
+        let savedDelegate = self.delegate
+        self.delegate = nil
+        self.setSelectedRange(charRange)
+        self.delegate = savedDelegate
     }
 }
 #endif

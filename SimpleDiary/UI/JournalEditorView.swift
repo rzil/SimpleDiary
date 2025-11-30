@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine // Using RichTextView for search highlighting
 
 struct JournalEditorView: View {
     @EnvironmentObject var store: JournalStore
@@ -16,29 +17,59 @@ struct JournalEditorView: View {
     @State private var currentMatchIndex: Int = 0
     @State private var totalMatches: Int = 0
 
+    @State private var highlights: [NSRange] = []
+    @State private var selectedRange: NSRange? = nil
+
     private func updateMatches() {
-        let text = entry.body
+        let text = entry.body as NSString
         let query = findQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Reset state when query is empty
         guard !query.isEmpty else {
+            highlights = []
             totalMatches = 0
             currentMatchIndex = 0
+            selectedRange = nil
             return
         }
-        // Simple case-insensitive count of occurrences
-        totalMatches = text.lowercased().components(separatedBy: query.lowercased()).count - 1
+
+        var ranges: [NSRange] = []
+        let lowerText = text.lowercased
+        let lowerQuery = query.lowercased()
+        var searchRange = NSRange(location: 0, length: text.length)
+        while true {
+            let found = (lowerText as NSString).range(of: lowerQuery, options: [], range: searchRange)
+            if found.location == NSNotFound { break }
+            ranges.append(found)
+            let nextLocation = found.location + max(found.length, 1)
+            if nextLocation >= text.length { break }
+            searchRange = NSRange(location: nextLocation, length: text.length - nextLocation)
+        }
+
+        highlights = ranges
+        totalMatches = ranges.count
         currentMatchIndex = min(max(currentMatchIndex, 0), max(totalMatches - 1, 0))
+        // Update selectedRange to the current match if available
+        if totalMatches > 0, currentMatchIndex < ranges.count {
+            selectedRange = ranges[currentMatchIndex]
+        } else {
+            selectedRange = nil
+        }
     }
 
     private func goToNextMatch() {
         guard totalMatches > 0 else { return }
         currentMatchIndex = (currentMatchIndex + 1) % totalMatches
-        // TODO: Scroll to the selected match if needed (bridge to NSTextView/UITextView)
+        if currentMatchIndex < highlights.count {
+            selectedRange = highlights[currentMatchIndex]
+        }
     }
 
     private func goToPreviousMatch() {
         guard totalMatches > 0 else { return }
         currentMatchIndex = (currentMatchIndex - 1 + totalMatches) % totalMatches
-        // TODO: Scroll to the selected match if needed
+        if currentMatchIndex < highlights.count {
+            selectedRange = highlights[currentMatchIndex]
+        }
     }
 
     var body: some View {
@@ -94,9 +125,10 @@ struct JournalEditorView: View {
                 .padding(.vertical, 4)
             }
             
-            TextEditor(text: $entry.body)
+            RichTextView(text: $entry.body, highlights: highlights, selectedRange: $selectedRange)
                 .font(.system(size: CGFloat(bodyPointSize)))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .onChange(of: entry.body) { updateMatches() }
         }
         .padding()
         .onChange(of: entry) {

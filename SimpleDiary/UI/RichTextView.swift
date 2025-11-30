@@ -68,6 +68,9 @@ private extension RichTextView {
 
             // Initial font setup
             updateFont(tv, font: font)
+            
+            // Set dynamic text color
+            tv.textColor = .label
 
             // Set initial text with highlights applied
             updateText(tv, text: text, highlights: highlights, font: font)
@@ -135,15 +138,19 @@ private extension RichTextView {
             if tv.font != uiFont {
                 tv.font = uiFont
             }
-            // Update typingAttributes with font
+            // Update typingAttributes with font and dynamic text color
             var attr = tv.typingAttributes
             attr[.font] = uiFont
+            attr[.foregroundColor] = UIColor.label
             tv.typingAttributes = attr
         }
 
         private func updateText(_ tv: UITextView, text: String, highlights: [NSRange], font: Font) {
             let uiFont = font.toUIFont() ?? UIFont.systemFont(ofSize: 17)
-            let attrString = NSMutableAttributedString(string: text, attributes: [.font: uiFont])
+            let attrString = NSMutableAttributedString(string: text, attributes: [
+                .font: uiFont,
+                .foregroundColor: UIColor.label
+            ])
             let fullRange = NSRange(location: 0, length: attrString.length)
             // Clear existing background colors in range
             attrString.removeAttribute(.backgroundColor, range: fullRange)
@@ -241,6 +248,10 @@ private extension RichTextView {
             scrollView.borderType = .noBorder
 
             updateFont(textView, font: font)
+            
+            // Set dynamic text color
+            textView.textColor = .labelColor
+
             updateText(textView, text: text, highlights: highlights, font: font)
 
             return scrollView
@@ -306,12 +317,16 @@ private extension RichTextView {
             }
             var typingAttributes = textView.typingAttributes
             typingAttributes[.font] = nsFont
+            typingAttributes[.foregroundColor] = NSColor.labelColor
             textView.typingAttributes = typingAttributes
         }
 
         private func updateText(_ textView: NSTextView, text: String, highlights: [NSRange], font: Font) {
             let nsFont = font.toNSFont() ?? NSFont.systemFont(ofSize: 17)
-            let attrString = NSMutableAttributedString(string: text, attributes: [.font: nsFont])
+            let attrString = NSMutableAttributedString(string: text, attributes: [
+                .font: nsFont,
+                .foregroundColor: NSColor.labelColor
+            ])
             let fullRange = NSRange(location: 0, length: attrString.length)
             attrString.removeAttribute(.backgroundColor, range: fullRange)
 

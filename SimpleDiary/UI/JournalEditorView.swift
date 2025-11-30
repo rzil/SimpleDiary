@@ -147,6 +147,16 @@ struct JournalEditorView: View {
                 Button("") { goToPreviousMatch() }
                     .keyboardShortcut(.return, modifiers: [.shift])
                     .opacity(0)
+                // Clear find query with Escape when find bar is visible
+                if isFindBarVisible {
+                    Button("") {
+                        // Clear the search text and reset matches
+                        findQuery = ""
+                        updateMatches()
+                    }
+                    .keyboardShortcut(.escape, modifiers: [])
+                    .opacity(0)
+                }
             }
         )
         .toolbar {

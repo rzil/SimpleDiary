@@ -187,5 +187,62 @@ struct PBKDF2Tests {
         let key = try PBKDF2.deriveKey(password: password, salt: salt, iterations: 2_000, keyLength: 48)
         #expect(key.count == 48)
     }
+
+    @Test("Maximum derived key length behavior (HMAC-SHA256)")
+    func maximumKeyLengthBehavior() throws {
+        let password = "pw"
+        let salt = Data("max-len-salt".utf8)
+        let iterations = 1_000
+        let maxLen = 32 * 255 // 8160 bytes for HMAC-SHA256
+        // Request exactly the theoretical maximum
+        let keyMax = try PBKDF2.deriveKey(password: password, salt: salt, iterations: iterations, keyLength: maxLen)
+        #expect(keyMax.count == maxLen)
+
+        // Request above the maximum — expect a throw if enforced, else at least ensure length matches request
+        var threw = false
+        do {
+            _ = try PBKDF2.deriveKey(password: password, salt: salt, iterations: iterations, keyLength: maxLen + 1)
+        } catch {
+            threw = true
+        }
+        if threw {
+            #expect(true)
+        } else {
+            let key = try PBKDF2.deriveKey(password: password, salt: salt, iterations: iterations, keyLength: maxLen + 1)
+            #expect(key.count == maxLen + 1)
+        }
+    }
+
+    @Test("Different iteration counts must yield different keys")
+    func differentIterationsYieldDifferentKeys() throws {
+        let password = "same-password"
+        let salt = Data("same-salt".utf8)
+        let keyLen = 32
+        let key1 = try PBKDF2.deriveKey(password: password, salt: salt, iterations: 1_000, keyLength: keyLen)
+        let key2 = try PBKDF2.deriveKey(password: password, salt: salt, iterations: 2_000, keyLength: keyLen)
+        #expect(key1 != key2)
+    }
+
+    @Test("Different salts must yield different keys")
+    func differentSaltsYieldDifferentKeys() throws {
+        let password = "same-password"
+        let salt1 = Data("salt-A".utf8)
+        let salt2 = Data("salt-B".utf8)
+        let keyLen = 32
+        let keyA = try PBKDF2.deriveKey(password: password, salt: salt1, iterations: 1_000, keyLength: keyLen)
+        let keyB = try PBKDF2.deriveKey(password: password, salt: salt2, iterations: 1_000, keyLength: keyLen)
+        #expect(keyA != keyB)
+    }
+
+    @Test("Same inputs must yield identical keys (determinism)")
+    func determinismSameInputs() throws {
+        let password = "deterministic"
+        let salt = Data("det-salt".utf8)
+        let iterations = 4096
+        let keyLen = 32
+        let k1 = try PBKDF2.deriveKey(password: password, salt: salt, iterations: iterations, keyLength: keyLen)
+        let k2 = try PBKDF2.deriveKey(password: password, salt: salt, iterations: iterations, keyLength: keyLen)
+        #expect(k1 == k2)
+    }
 }
 

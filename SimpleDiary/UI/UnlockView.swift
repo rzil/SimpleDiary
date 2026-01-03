@@ -4,10 +4,22 @@ struct UnlockView: View {
     @EnvironmentObject var appState: DiaryAppState
     @State private var password: String = ""
     @State private var errorMessage: String?
+    
+    // Compute the selected vault's display name from the index
+    private var selectedVaultName: String? {
+        guard let id = appState.selectedVaultID else { return nil }
+        return appState.vaults.first(where: { $0.id == id })?.name
+    }
 
     var body: some View {
         VStack(spacing: 16) {
             Text("Unlock Journal")
+            
+            if let name = selectedVaultName, !name.isEmpty {
+                Text(name)
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
+            }
 
             SecureField("Master Password", text: $password)
                 .textFieldStyle(.roundedBorder)

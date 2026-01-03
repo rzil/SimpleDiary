@@ -75,56 +75,56 @@ struct VaultsManagerView: View {
                 }
             }
             .sheet(isPresented: $showingCreateSheet) {
-                NavigationView {
+                VStack {
                     Form {
                         Section(header: Text("Vault Info")) {
                             TextField("Name", text: $newVaultName)
                             SecureField("Password", text: $newVaultPassword)
                         }
                     }
-                    .navigationTitle("Create Vault")
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Create") {
-                                appState.createVault(named: newVaultName, password: newVaultPassword)
-                                showingCreateSheet = false
-                            }
-                            .disabled(newVaultName.trimmingCharacters(in: .whitespaces).isEmpty || newVaultPassword.isEmpty)
+                    .padding()
+                }
+                .frame(minWidth: 360, minHeight: 200)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Create") {
+                            appState.createVault(named: newVaultName, password: newVaultPassword)
+                            showingCreateSheet = false
                         }
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Cancel") {
-                                showingCreateSheet = false
-                            }
-                        }
+                        .disabled(newVaultName.trimmingCharacters(in: .whitespaces).isEmpty || newVaultPassword.isEmpty)
+                    }
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { showingCreateSheet = false }
                     }
                 }
+                .navigationTitle("Create Vault")
             }
             .sheet(isPresented: $showingRenameSheet) {
-                NavigationView {
+                VStack {
                     Form {
                         Section(header: Text("Rename Vault")) {
                             TextField("New Name", text: $renameVaultName)
                         }
                     }
-                    .navigationTitle("Rename Vault")
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Rename") {
-                                if let vault = renameVault,
-                                   !renameVaultName.trimmingCharacters(in: .whitespaces).isEmpty {
-                                    appState.renameVault(vault.id, to: renameVaultName)
-                                }
-                                showingRenameSheet = false
+                    Spacer(minLength: 0)
+                }
+                .frame(minWidth: 380, minHeight: 220)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Rename") {
+                            if let vault = renameVault,
+                               !renameVaultName.trimmingCharacters(in: .whitespaces).isEmpty {
+                                appState.renameVault(vault.id, to: renameVaultName)
                             }
-                            .disabled(renameVaultName.trimmingCharacters(in: .whitespaces).isEmpty)
+                            showingRenameSheet = false
                         }
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Cancel") {
-                                showingRenameSheet = false
-                            }
-                        }
+                        .disabled(renameVaultName.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { showingRenameSheet = false }
                     }
                 }
+                .navigationTitle("Rename Vault")
             }
             .alert("Delete Vault", isPresented: $showingDeleteAlert, presenting: deleteVault) { vault in
                 Button("Delete", role: .destructive) {

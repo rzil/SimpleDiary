@@ -1,4 +1,3 @@
-
 import SwiftUI
 
 struct JournalRootView: View {
@@ -52,6 +51,7 @@ struct JournalRootView: View {
                     appState.noteActivity()
                 }
             }
+            .navigationTitle(appState.vaults.first(where: { $0.id == appState.selectedVaultID })?.name ?? "Journal")
             .onChange(of: selectedID) {
                 appState.noteActivity()
             }
@@ -99,6 +99,27 @@ struct JournalRootView: View {
                     } label: {
                         Image(systemName: "gearshape")
                     }
+                }
+
+                ToolbarItem(placement: .automatic) {
+                    Text(appState.vaults.first(where: { $0.id == appState.selectedVaultID })?.name ?? "—")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .help("Current vault")
+                }
+
+                ToolbarItem(placement: .navigation) {
+                    Picker("Vault", selection: Binding(
+                        get: { appState.selectedVaultID ?? UUID() },
+                        set: { newID in appState.selectVault(newID) }
+                    )) {
+                        ForEach(appState.vaults) { v in
+                            Text(v.name).tag(v.id)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .frame(minWidth: 160)
+                    .help("Switch vault")
                 }
 
                 // Lock

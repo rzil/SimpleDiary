@@ -222,7 +222,7 @@ final class AppState: ObservableObject {
             selectedVaultID = id
             self.currentKey = key
             self.vaultMeta = VaultMeta(saltBase64: header.saltBase64, iterations: header.iterations, biometricsEnabled: false, autoLockTimeoutSeconds: 5*60, schemaVersion: header.schemaVersion)
-            let store = try JournalStore(key: key, vaultURL: url, header: header)
+            let store = JournalStore(key: key, vaultURL: url, header: header)
             store.entries = entries
             self.journalStore = store
             self.mode = .unlocked
@@ -319,7 +319,7 @@ final class AppState: ObservableObject {
                 schemaVersion: header.schemaVersion
             )
             
-            let store = try JournalStore(key: key, vaultURL: url, header: header)
+            let store = JournalStore(key: key, vaultURL: url, header: header)
             store.entries = entries
             self.journalStore = store
             self.mode = .unlocked

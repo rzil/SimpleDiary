@@ -25,12 +25,6 @@ struct MathUtilitiesTests {
     }
 }
 
-private final class StubBiometricManager: BiometricKeychainManaging {
-    func storeKey(_ key: SymmetricKey) throws {}
-    func loadKeyWithBiometrics(completion: @escaping (Result<SymmetricKey, Swift.Error>) -> Void) { completion(.failure(NSError(domain: "stub", code: -1))) }
-    func deleteKey() throws {}
-}
-
 @MainActor
 @Suite("AppState lightweight logic")
 struct AppStateLogicTests {

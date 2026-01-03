@@ -1,4 +1,3 @@
-
 import Foundation
 import CryptoKit
 
@@ -6,6 +5,8 @@ import CryptoKit
 /// Note: for a real product consider using a well-reviewed KDF implementation or Argon2.
 enum PBKDF2 {
     enum Error: Swift.Error {
+        case invalidIterations
+        case invalidKeyLength
         case derivedKeyTooLong
     }
     
@@ -15,8 +16,8 @@ enum PBKDF2 {
     }
     
     static func deriveKey(passwordData: Data, salt: Data, iterations: Int, keyLength: Int) throws -> Data {
-        precondition(iterations > 0, "PBKDF2: iterations must be > 0")
-        precondition(keyLength > 0, "PBKDF2: keyLength must be > 0")
+        guard iterations > 0 else { throw Error.invalidIterations }
+        guard keyLength > 0 else { throw Error.invalidKeyLength }
         
         let hLen = Int(SHA256.Digest.byteCount)
         let l = Int(ceil(Double(keyLength) / Double(hLen)))

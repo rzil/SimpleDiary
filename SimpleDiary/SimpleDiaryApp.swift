@@ -9,7 +9,7 @@ import Combine
 import SwiftUI
 
 @main
-struct DiaryApp: App {
+struct SimpleDiaryApp: App {
     @StateObject private var appState = AppState()
     
     var body: some Scene {
@@ -20,6 +20,7 @@ struct DiaryApp: App {
         .windowStyle(.titleBar)
         .commands {
             AppMenuCommands(appState: appState)
+            VaultsMenuCommands(appState: appState)
         }
     }
 }

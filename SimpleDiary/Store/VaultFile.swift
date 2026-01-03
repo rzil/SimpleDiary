@@ -89,9 +89,16 @@ struct VaultFile {
 
         let header = try JSONDecoder().decode(VaultHeader.self, from: headerData)
 
+        // Validate schema version immediately during read
+        let supportedSchemaVersions: Set<Int> = [1]
+        guard supportedSchemaVersions.contains(header.schemaVersion) else {
+            throw VaultFileError.unsupportedSchemaVersion(header.schemaVersion)
+        }
+
         // ciphertext is "the rest"
         let ciphertext = data.suffix(from: offset)
 
         return (header, ciphertext)
     }
 }
+

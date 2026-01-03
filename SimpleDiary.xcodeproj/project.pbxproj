@@ -6,9 +6,20 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		779330F22F098D300022856B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 778F9E4C2ED1700500FBC1F1 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 778F9E532ED1700500FBC1F1;
+			remoteInfo = SimpleDiary;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		778F9E542ED1700500FBC1F1 /* SimpleDiary.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SimpleDiary.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7792C83C2ED262CE00E22EC3 /* SimpleDiary.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = SimpleDiary.xctestplan; sourceTree = "<group>"; };
+		779330EE2F098D300022856B /* SimpleDiaryTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SimpleDiaryTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -17,10 +28,22 @@
 			path = SimpleDiary;
 			sourceTree = "<group>";
 		};
+		779330EF2F098D300022856B /* SimpleDiaryTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SimpleDiaryTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		778F9E512ED1700500FBC1F1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		779330EB2F098D300022856B /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -35,6 +58,7 @@
 			children = (
 				7792C83C2ED262CE00E22EC3 /* SimpleDiary.xctestplan */,
 				778F9E562ED1700500FBC1F1 /* SimpleDiary */,
+				779330EF2F098D300022856B /* SimpleDiaryTests */,
 				778F9E552ED1700500FBC1F1 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -43,6 +67,7 @@
 			isa = PBXGroup;
 			children = (
 				778F9E542ED1700500FBC1F1 /* SimpleDiary.app */,
+				779330EE2F098D300022856B /* SimpleDiaryTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -72,6 +97,29 @@
 			productReference = 778F9E542ED1700500FBC1F1 /* SimpleDiary.app */;
 			productType = "com.apple.product-type.application";
 		};
+		779330ED2F098D300022856B /* SimpleDiaryTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 779330F42F098D300022856B /* Build configuration list for PBXNativeTarget "SimpleDiaryTests" */;
+			buildPhases = (
+				779330EA2F098D300022856B /* Sources */,
+				779330EB2F098D300022856B /* Frameworks */,
+				779330EC2F098D300022856B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				779330F32F098D300022856B /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				779330EF2F098D300022856B /* SimpleDiaryTests */,
+			);
+			name = SimpleDiaryTests;
+			packageProductDependencies = (
+			);
+			productName = SimpleDiaryTests;
+			productReference = 779330EE2F098D300022856B /* SimpleDiaryTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -79,11 +127,15 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2610;
+				LastSwiftUpdateCheck = 2620;
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
 					778F9E532ED1700500FBC1F1 = {
 						CreatedOnToolsVersion = 26.1.1;
+					};
+					779330ED2F098D300022856B = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 778F9E532ED1700500FBC1F1;
 					};
 				};
 			};
@@ -102,12 +154,20 @@
 			projectRoot = "";
 			targets = (
 				778F9E532ED1700500FBC1F1 /* SimpleDiary */,
+				779330ED2F098D300022856B /* SimpleDiaryTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		778F9E522ED1700500FBC1F1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		779330EC2F098D300022856B /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -124,7 +184,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		779330EA2F098D300022856B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		779330F32F098D300022856B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 778F9E532ED1700500FBC1F1 /* SimpleDiary */;
+			targetProxy = 779330F22F098D300022856B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		778F9E732ED1700600FBC1F1 /* Debug */ = {
@@ -317,6 +392,48 @@
 			};
 			name = Release;
 		};
+		779330F52F098D300022856B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RMZ2G329T3;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = au.com.integritech.SimpleDiaryTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SimpleDiary.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SimpleDiary";
+			};
+			name = Debug;
+		};
+		779330F62F098D300022856B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RMZ2G329T3;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = au.com.integritech.SimpleDiaryTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SimpleDiary.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SimpleDiary";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -334,6 +451,15 @@
 			buildConfigurations = (
 				778F9E762ED1700600FBC1F1 /* Debug */,
 				778F9E772ED1700600FBC1F1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		779330F42F098D300022856B /* Build configuration list for PBXNativeTarget "SimpleDiaryTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				779330F52F098D300022856B /* Debug */,
+				779330F62F098D300022856B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

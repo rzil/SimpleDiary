@@ -14,6 +14,10 @@ struct VaultsMenuCommands: Commands {
                 }
             }
             Divider()
+            Button("Manage Vaults…") {
+                openVaultsManagerWindow()
+            }
+            Divider()
             Button("Create New Vault…") {
                 showCreateNewVaultAlert()
             }
@@ -28,6 +32,17 @@ struct VaultsMenuCommands: Commands {
             }
             .disabled(appState.selectedVaultID == nil)
         }
+    }
+
+    private func openVaultsManagerWindow() {
+        let vc = NSHostingController(rootView: VaultsManagerView().environmentObject(appState))
+        let window = NSWindow(contentViewController: vc)
+        window.title = "Manage Vaults"
+        window.setContentSize(NSSize(width: 480, height: 420))
+        window.styleMask.insert([.titled, .closable, .miniaturizable, .resizable])
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     private func showCreateNewVaultAlert() {

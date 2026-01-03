@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppKit
 
 struct AppMenuCommands: Commands {
     @ObservedObject var appState: AppState
@@ -19,9 +20,14 @@ struct AppMenuCommands: Commands {
             .disabled(appState.mode != .unlocked)
 
             Button("Show Vault in Finder") {
-                NSWorkspace.shared.activateFileViewerSelecting([appState.vaultURL])
+                if let url = appState.selectedVaultURL {
+                    NSWorkspace.shared.activateFileViewerSelecting([url])
+                }
             }
-            .disabled(!FileManager.default.fileExists(atPath: appState.vaultURL.path))
+            .disabled({
+                guard let url = appState.selectedVaultURL else { return true }
+                return !FileManager.default.fileExists(atPath: url.path)
+            }())
         }
     }
 }

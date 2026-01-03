@@ -2,6 +2,16 @@ import Combine
 import Foundation
 import CryptoKit
 
+struct VaultInfo: Codable, Identifiable, Equatable {
+    let id: UUID
+    var name: String
+    var lastOpened: Date?
+}
+
+struct VaultsIndex: Codable {
+    var vaults: [VaultInfo]
+}
+
 protocol BiometricKeychainManaging {
     func storeKey(_ key: SymmetricKey) throws
     func loadKeyWithBiometrics(
@@ -20,6 +30,16 @@ final class AppState: ObservableObject {
     }
     
     @Published var mode: Mode = .initializing
+
+    @Published var vaults: [VaultInfo] = []
+    @Published var selectedVaultID: UUID?
+    
+    // Per-selected-vault computed helpers
+    var selectedVaultURL: URL? {
+        guard let id = selectedVaultID else { return nil }
+        return vaultURL(for: id)
+    }
+    
     @Published var vaultMeta: VaultMeta?
     @Published var journalStore: JournalStore?
     @Published var lastActivity: Date? = nil
@@ -28,6 +48,9 @@ final class AppState: ObservableObject {
     
     private let fileManager = FileManager.default
     private let baseDir: URL
+    
+    private var vaultsDir: URL { baseDir.appendingPathComponent("Vaults", isDirectory: true) }
+    private var indexURL: URL { baseDir.appendingPathComponent("VaultsIndex.json") }
     
     private let biometricManager: BiometricKeychainManaging
     
@@ -55,21 +78,78 @@ final class AppState: ObservableObject {
             try? fm.createDirectory(at: appSupport, withIntermediateDirectories: true)
         }
         
+        let vaults = appSupport.appendingPathComponent("Vaults", isDirectory: true)
+        if !fm.fileExists(atPath: vaults.path) {
+            try? fm.createDirectory(at: vaults, withIntermediateDirectories: true)
+        }
+        
         self.init(
             baseDir: appSupport,
             biometricManager: BiometricKeychainManager()
         )
     }
-
+    
+    // MARK: - Vaults index helpers
+    
+    private func udKey(_ key: String) -> String {
+        if let id = selectedVaultID { return "\(key)_\(id.uuidString)" }
+        return key
+    }
+    
+    private func loadVaultsIndex() {
+        do {
+            if fileManager.fileExists(atPath: indexURL.path) {
+                let data = try Data(contentsOf: indexURL)
+                let idx = try JSONDecoder().decode(VaultsIndex.self, from: data)
+                self.vaults = idx.vaults
+            } else {
+                self.vaults = []
+            }
+        } catch {
+            print("Failed to load vaults index:", error)
+            self.vaults = []
+        }
+    }
+    
+    private func saveVaultsIndex() {
+        do {
+            let data = try JSONEncoder().encode(VaultsIndex(vaults: vaults))
+            try data.write(to: indexURL, options: [.atomic])
+        } catch {
+            print("Failed to save vaults index:", error)
+        }
+    }
+    
+    private func vaultURL(for id: UUID) -> URL {
+        vaultsDir.appendingPathComponent("\(id.uuidString).vault")
+    }
+    
+    // MARK: - Vault lifecycle
+    
     func initialize() async {
-        if fileManager.fileExists(atPath: vaultURL.path) {
+        // Load or create index
+        do {
+            try fileManager.createDirectory(at: vaultsDir, withIntermediateDirectories: true)
+        } catch {}
+        loadVaultsIndex()
+        
+        // Auto-select last opened vault if none selected
+        if selectedVaultID == nil {
+            selectedVaultID = vaults.sorted { ($0.lastOpened ?? .distantPast) > ($1.lastOpened ?? .distantPast) }.first?.id
+        }
+        
+        guard let url = selectedVaultURL else {
+            // No vaults exist yet
+            self.mode = .needsSetup
+            return
+        }
+        
+        if fileManager.fileExists(atPath: url.path) {
             do {
-                let (header, _) = try VaultFile.read(from: vaultURL)
-                
-                let biometricsEnabled = UserDefaults.standard.bool(forKey: "biometricsEnabled")
-                let autoLock = UserDefaults.standard.integer(forKey: "autoLockTimeoutSeconds")
+                let (header, _) = try VaultFile.read(from: url)
+                let biometricsEnabled = UserDefaults.standard.bool(forKey: self.udKey("biometricsEnabled"))
+                let autoLock = UserDefaults.standard.integer(forKey: self.udKey("autoLockTimeoutSeconds"))
                 let timeout = autoLock > 0 ? autoLock : (5 * 60)
-                
                 self.vaultMeta = VaultMeta(
                     saltBase64: header.saltBase64,
                     iterations: header.iterations,
@@ -87,34 +167,87 @@ final class AppState: ObservableObject {
         }
     }
     
-    private func completeUnlock(with key: SymmetricKey) throws {
-        let store = try JournalStore(unlockingWith: key, vaultURL: vaultURL)
-        
-        // Update in-memory meta from header + stored prefs
-        let (header, _) = try VaultFile.read(from: vaultURL)
-        let biometricsEnabled = UserDefaults.standard.bool(forKey: "biometricsEnabled")
-        let autoLock = UserDefaults.standard.integer(forKey: "autoLockTimeoutSeconds")
-        let timeout = autoLock > 0 ? autoLock : (5 * 60)
-        
-        self.vaultMeta = VaultMeta(
-            saltBase64: header.saltBase64,
-            iterations: header.iterations,
-            biometricsEnabled: biometricsEnabled,
-            autoLockTimeoutSeconds: timeout,
-            schemaVersion: header.schemaVersion
-        )
-        
-        self.currentKey = key
-        self.journalStore = store
-        self.mode = .unlocked
-        self.noteActivity()
+    // MARK: - Create / Select / Rename / Delete vaults
+    
+    func createVault(named name: String, password: String) {
+        do {
+            try fileManager.createDirectory(at: vaultsDir, withIntermediateDirectories: true)
+            let id = UUID()
+            let url = vaultURL(for: id)
+            // KDF params
+            let salt = try RandomBytes.generate(count: 32)
+            let iterations = 100_000
+            let keyData = try PBKDF2.deriveKey(password: password, salt: salt, iterations: iterations, keyLength: 32)
+            let key = SymmetricKey(data: keyData)
+            let entries: [JournalEntry] = []
+            let json = try JSONEncoder().encode(entries)
+            let crypto = CryptoManager(key: key)
+            let ciphertext = try crypto.encrypt(json)
+            let header = VaultHeader(schemaVersion: 1, saltBase64: salt.base64EncodedString(), iterations: iterations)
+            try VaultFile.write(to: url, header: header, ciphertext: ciphertext)
+            let info = VaultInfo(id: id, name: name, lastOpened: Date())
+            vaults.append(info)
+            saveVaultsIndex()
+            selectedVaultID = id
+            self.currentKey = key
+            self.vaultMeta = VaultMeta(saltBase64: header.saltBase64, iterations: header.iterations, biometricsEnabled: false, autoLockTimeoutSeconds: 5*60, schemaVersion: header.schemaVersion)
+            let store = try JournalStore(key: key, vaultURL: url, header: header)
+            store.entries = entries
+            self.journalStore = store
+            self.mode = .unlocked
+            self.noteActivity()
+        } catch {
+            print("Failed to create vault:", error)
+            self.mode = .needsSetup
+        }
+    }
+    
+    func selectVault(_ id: UUID) {
+        lock()
+        selectedVaultID = id
+        // Load header to set state to locked
+        do {
+            let url = vaultURL(for: id)
+            let (header, _) = try VaultFile.read(from: url)
+            let biometricsEnabled = UserDefaults.standard.bool(forKey: self.udKey("biometricsEnabled"))
+            let autoLock = UserDefaults.standard.integer(forKey: self.udKey("autoLockTimeoutSeconds"))
+            let timeout = autoLock > 0 ? autoLock : (5 * 60)
+            self.vaultMeta = VaultMeta(saltBase64: header.saltBase64, iterations: header.iterations, biometricsEnabled: biometricsEnabled, autoLockTimeoutSeconds: timeout, schemaVersion: header.schemaVersion)
+            self.mode = .locked
+        } catch {
+            print("Failed to select vault:", error)
+            self.mode = .needsSetup
+        }
+    }
+    
+    func renameVault(_ id: UUID, to newName: String) {
+        if let idx = vaults.firstIndex(where: { $0.id == id }) {
+            vaults[idx].name = newName
+            saveVaultsIndex()
+        }
+    }
+    
+    func deleteVault(_ id: UUID) {
+        let url = vaultURL(for: id)
+        do { try fileManager.removeItem(at: url) } catch { print("Failed to delete vault file:", error) }
+        vaults.removeAll { $0.id == id }
+        saveVaultsIndex()
+        if selectedVaultID == id {
+            selectedVaultID = nil
+            journalStore = nil
+            currentKey = nil
+            vaultMeta = nil
+            mode = .needsSetup
+        }
     }
     
     // MARK: - Setup
     
     func setupVault(password: String) {
+        if selectedVaultID == nil { createVault(named: "My Vault", password: password); return }
+        guard let url = selectedVaultURL else { return }
         do {
-            try fileManager.createDirectory(at: baseDir, withIntermediateDirectories: true)
+            try fileManager.createDirectory(at: vaultsDir, withIntermediateDirectories: true)
             
             // KDF params
             let salt = try RandomBytes.generate(count: 32)
@@ -143,12 +276,11 @@ final class AppState: ObservableObject {
             )
             
             // Write single vault file
-            try VaultFile.write(to: vaultURL, header: header, ciphertext: ciphertext)
+            try VaultFile.write(to: url, header: header, ciphertext: ciphertext)
             
             // In-memory state
             self.currentKey = key
             self.vaultMeta = VaultMeta(
-                // You can keep VaultMeta as internal in-memory mirror:
                 saltBase64: header.saltBase64,
                 iterations: header.iterations,
                 biometricsEnabled: false,
@@ -156,7 +288,7 @@ final class AppState: ObservableObject {
                 schemaVersion: header.schemaVersion
             )
             
-            let store = try JournalStore(key: key, vaultURL: vaultURL, header: header)
+            let store = try JournalStore(key: key, vaultURL: url, header: header)
             store.entries = entries
             self.journalStore = store
             self.mode = .unlocked
@@ -170,8 +302,9 @@ final class AppState: ObservableObject {
     // MARK: - Unlock
     
     func unlockWithPassword(_ password: String) {
+        guard let url = selectedVaultURL else { return }
         do {
-            let (header, _) = try VaultFile.read(from: vaultURL)
+            let (header, _) = try VaultFile.read(from: url)
             guard let salt = Data(base64Encoded: header.saltBase64) else {
                 throw NSError(domain: "VaultError", code: -1,
                               userInfo: [NSLocalizedDescriptionKey: "Invalid salt in header"])
@@ -213,6 +346,40 @@ final class AppState: ObservableObject {
         }
     }
     
+    private func completeUnlock(with key: SymmetricKey) throws {
+        guard let url = selectedVaultURL else {
+            throw NSError(domain: "VaultError", code: -100,
+                          userInfo: [NSLocalizedDescriptionKey: "No vault selected"])
+        }
+        
+        let store = try JournalStore(unlockingWith: key, vaultURL: url)
+        
+        // Update in-memory meta from header + stored prefs
+        let (header, _) = try VaultFile.read(from: url)
+        let biometricsEnabled = UserDefaults.standard.bool(forKey: udKey("biometricsEnabled"))
+        let autoLock = UserDefaults.standard.integer(forKey: udKey("autoLockTimeoutSeconds"))
+        let timeout = autoLock > 0 ? autoLock : (5 * 60)
+        
+        self.vaultMeta = VaultMeta(
+            saltBase64: header.saltBase64,
+            iterations: header.iterations,
+            biometricsEnabled: biometricsEnabled,
+            autoLockTimeoutSeconds: timeout,
+            schemaVersion: header.schemaVersion
+        )
+        
+        self.currentKey = key
+        self.journalStore = store
+        self.mode = .unlocked
+        self.noteActivity()
+        
+        // Update lastOpened for selected vault and save index
+        if let id = selectedVaultID, let idx = vaults.firstIndex(where: { $0.id == id }) {
+            vaults[idx].lastOpened = Date()
+            saveVaultsIndex()
+        }
+    }
+    
     func lock() {
         currentKey = nil
         journalStore = nil
@@ -226,7 +393,7 @@ final class AppState: ObservableObject {
             guard let key = currentKey else { return }
             do {
                 try biometricManager.storeKey(key)
-                UserDefaults.standard.set(true, forKey: "biometricsEnabled")
+                UserDefaults.standard.set(true, forKey: udKey("biometricsEnabled"))
                 if var meta = vaultMeta {
                     meta.biometricsEnabled = true
                     vaultMeta = meta
@@ -237,7 +404,7 @@ final class AppState: ObservableObject {
         } else {
             do {
                 try biometricManager.deleteKey()
-                UserDefaults.standard.set(false, forKey: "biometricsEnabled")
+                UserDefaults.standard.set(false, forKey: udKey("biometricsEnabled"))
                 if var meta = vaultMeta {
                     meta.biometricsEnabled = false
                     vaultMeta = meta
@@ -251,7 +418,7 @@ final class AppState: ObservableObject {
     // MARK: - Auto-lock settings
     
     func updateAutoLockTimeout(seconds: Int) {
-        UserDefaults.standard.set(seconds, forKey: "autoLockTimeoutSeconds")
+        UserDefaults.standard.set(seconds, forKey: udKey("autoLockTimeoutSeconds"))
         if var meta = vaultMeta {
             meta.autoLockTimeoutSeconds = seconds
             vaultMeta = meta
@@ -270,9 +437,13 @@ final class AppState: ObservableObject {
             throw NSError(domain: "VaultError", code: -2,
                           userInfo: [NSLocalizedDescriptionKey: "Vault not initialised"])
         }
+        guard let url = selectedVaultURL else {
+            throw NSError(domain: "VaultError", code: -101,
+                          userInfo: [NSLocalizedDescriptionKey: "No vault selected"])
+        }
         
         // 1. Read header from the single vault file
-        let (header, _) = try VaultFile.read(from: vaultURL)
+        let (header, _) = try VaultFile.read(from: url)
         
         guard let saltData = Data(base64Encoded: header.saltBase64) else {
             throw NSError(domain: "VaultError", code: -3,
@@ -314,13 +485,13 @@ final class AppState: ObservableObject {
         newHeader.saltBase64 = newSalt.base64EncodedString()
         // schemaVersion and iterations stay as-is (unless you deliberately bump them)
         
-        try VaultFile.write(to: vaultURL, header: newHeader, ciphertext: newCiphertext)
+        try VaultFile.write(to: url, header: newHeader, ciphertext: newCiphertext)
         
         // 5. Update in-memory state: key, store, vaultMeta mirror
         self.currentKey = newKey
         
         // Recreate the store so future saves use the new key/header
-        let newStore = try JournalStore(unlockingWith: newKey, vaultURL: vaultURL)
+        let newStore = try JournalStore(unlockingWith: newKey, vaultURL: url)
         self.journalStore = newStore
         
         if var meta = vaultMeta {
@@ -362,9 +533,13 @@ final class AppState: ObservableObject {
             throw NSError(domain: "VaultError", code: -11,
                           userInfo: [NSLocalizedDescriptionKey: "Vault not initialised."])
         }
+        guard let url = selectedVaultURL else {
+            throw NSError(domain: "VaultError", code: -102,
+                          userInfo: [NSLocalizedDescriptionKey: "No vault selected"])
+        }
         
         // 1) Read current header from the single vault file
-        let (header, _) = try VaultFile.read(from: vaultURL)
+        let (header, _) = try VaultFile.read(from: url)
         
         // 2) Generate new salt and derive new key from the NEW password
         let newSalt = try RandomBytes.generate(count: 32)
@@ -388,12 +563,12 @@ final class AppState: ObservableObject {
         newHeader.saltBase64 = newSalt.base64EncodedString()
         // schemaVersion and iterations stay the same
         
-        try VaultFile.write(to: vaultURL, header: newHeader, ciphertext: newCiphertext)
+        try VaultFile.write(to: url, header: newHeader, ciphertext: newCiphertext)
         
         // 5) Update in-memory key + store
         self.currentKey = newKey
         
-        let newStore = try JournalStore(unlockingWith: newKey, vaultURL: vaultURL)
+        let newStore = try JournalStore(unlockingWith: newKey, vaultURL: url)
         self.journalStore = newStore
         
         // 6) Update vaultMeta mirror (if you still use it for prefs)
@@ -439,10 +614,6 @@ final class AppState: ObservableObject {
         if Date().timeIntervalSince(last) > TimeInterval(seconds) {
             lock()
         }
-    }
-    
-    internal var vaultURL: URL {
-        baseDir.appendingPathComponent("Diary.vault")
     }
     
     // MARK: - Saving

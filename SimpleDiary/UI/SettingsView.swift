@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 enum AutoLockOption: Int, CaseIterable, Identifiable {
     case off = 0
@@ -69,7 +70,10 @@ struct SettingsView: View {
             Button("Show vault file in Finder…") {
                 revealVaultInFinder()
             }
-            .disabled(!FileManager.default.fileExists(atPath: appState.vaultURL.path))
+            .disabled({
+                guard let url = appState.selectedVaultURL else { return true }
+                return !FileManager.default.fileExists(atPath: url.path)
+            }())
             .help("Reveals the encrypted vault file in Finder. Don’t delete it unless you have a backup.")
             
             Button("Change master password…") {
@@ -105,7 +109,7 @@ struct SettingsView: View {
     }
     
     private func revealVaultInFinder() {
-        let url = appState.vaultURL
+        guard let url = appState.selectedVaultURL else { return }
         NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 }

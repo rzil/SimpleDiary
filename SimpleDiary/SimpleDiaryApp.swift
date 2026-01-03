@@ -10,7 +10,7 @@ import SwiftUI
 
 @main
 struct SimpleDiaryApp: App {
-    @StateObject private var appState = AppState()
+    @StateObject private var appState = DiaryAppState()
     
     var body: some Scene {
         WindowGroup {
@@ -26,7 +26,7 @@ struct SimpleDiaryApp: App {
 }
 
 struct RootView: View {
-    @EnvironmentObject var appState: AppState
+    @EnvironmentObject var appState: DiaryAppState
     @Environment(\.scenePhase) private var scenePhase
     
     var body: some View {
@@ -62,3 +62,4 @@ struct RootView: View {
         }
     }
 }
+

@@ -9,10 +9,10 @@ struct VaultsIndexTests {
     func createAndReloadVaultIndex() async throws {
         let base = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(UUID().uuidString)
 
-        let app = AppState(baseDir: base, biometricManager: StubBiometricManager())
+        let app = DiaryAppState(baseDir: base, biometricManager: StubBiometricManager())
         app.createVault(named: "Test Vault", password: "pw")
 
-        let appReloaded = AppState(baseDir: base, biometricManager: StubBiometricManager())
+        let appReloaded = DiaryAppState(baseDir: base, biometricManager: StubBiometricManager())
         await appReloaded.initialize()
 
         #expect(appReloaded.vaults.contains { $0.name == "Test Vault" })

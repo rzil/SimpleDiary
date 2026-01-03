@@ -2,7 +2,7 @@ import SwiftUI
 
 struct JournalRootView: View {
     @EnvironmentObject var store: JournalStore
-    @EnvironmentObject var appState: AppState
+    @EnvironmentObject var appState: DiaryAppState
     
     @State private var selectedID: JournalEntry.ID?
     @State private var showingSettings = false
@@ -145,3 +145,4 @@ struct JournalRootView: View {
         }
     }
 }
+

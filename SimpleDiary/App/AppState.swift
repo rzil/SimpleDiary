@@ -21,7 +21,7 @@ protocol BiometricKeychainManaging {
 }
 
 @MainActor
-final class AppState: ObservableObject {
+final class DiaryAppState: ObservableObject {
     enum Mode {
         case initializing
         case needsSetup

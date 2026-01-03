@@ -8,7 +8,7 @@ struct IdleLockTests {
     @Test("Locks after timeout when idle")
     func locksAfterTimeout() async {
         let base = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(UUID().uuidString)
-        let app = AppState(baseDir: base, biometricManager: StubBiometricManager())
+        let app = DiaryAppState(baseDir: base, biometricManager: StubBiometricManager())
 
         // Initialize the app (no vaults yet → needsSetup)
         await app.initialize()

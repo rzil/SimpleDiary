@@ -9,7 +9,7 @@ struct JournalStoreRoundTripTests {
     @Test("Entries persist through save/load")
     func entriesPersist() async throws {
         let base = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(UUID().uuidString)
-        let app = AppState(baseDir: base, biometricManager: StubBiometricManager())
+        let app = DiaryAppState(baseDir: base, biometricManager: StubBiometricManager())
         await app.initialize()
         app.createVault(named: "RT", password: "pw")
 
@@ -23,8 +23,8 @@ struct JournalStoreRoundTripTests {
         // Save is triggered by addEntry(); ensure it's written
         store.save()
 
-        // Reload a new AppState from same base
-        let appReloaded = AppState(baseDir: base, biometricManager: StubBiometricManager())
+        // Reload a new DiaryAppState from same base
+        let appReloaded = DiaryAppState(baseDir: base, biometricManager: StubBiometricManager())
         await appReloaded.initialize()
         // Unlock with the same password
         appReloaded.unlockWithPassword("pw")

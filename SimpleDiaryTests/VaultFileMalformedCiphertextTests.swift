@@ -9,7 +9,7 @@ struct VaultFileMalformedCiphertextTests {
     @Test("Decrypting invalid ciphertext fails during unlock")
     func invalidCiphertextDuringUnlock() async throws {
         let base = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(UUID().uuidString)
-        let app = AppState(baseDir: base, biometricManager: StubBiometricManager())
+        let app = DiaryAppState(baseDir: base, biometricManager: StubBiometricManager())
         await app.initialize()
 
         // Create a valid vault first

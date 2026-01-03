@@ -2,7 +2,7 @@ import SwiftUI
 import Foundation
 
 struct VaultsManagerView: View {
-    @EnvironmentObject var appState: AppState
+    @EnvironmentObject var appState: DiaryAppState
     @Environment(\.dismiss) private var dismiss
 
     @State private var showingCreateSheet = false
@@ -159,7 +159,7 @@ private let dateFormatter: DateFormatter = {
 struct VaultsManagerView_Previews: PreviewProvider {
     static var previews: some View {
         VaultsManagerView()
-            .environmentObject(AppState())
+            .environmentObject(DiaryAppState())
     }
 }
 #endif

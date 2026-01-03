@@ -9,7 +9,7 @@ struct JournalStoreDeleteTests {
     @Test("Deleting by offsets removes correct entries and persists")
     func deleteByOffsets() async throws {
         let base = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(UUID().uuidString)
-        let app = AppState(baseDir: base, biometricManager: StubBiometricManager())
+        let app = DiaryAppState(baseDir: base, biometricManager: StubBiometricManager())
         await app.initialize()
         app.createVault(named: "DEL", password: "pw")
 
@@ -26,7 +26,7 @@ struct JournalStoreDeleteTests {
 
         // Save and reload to ensure persistence
         store.save()
-        let appReloaded = AppState(baseDir: base, biometricManager: StubBiometricManager())
+        let appReloaded = DiaryAppState(baseDir: base, biometricManager: StubBiometricManager())
         await appReloaded.initialize()
         appReloaded.unlockWithPassword("pw")
         let ids = appReloaded.journalStore?.entries.map { $0.id }

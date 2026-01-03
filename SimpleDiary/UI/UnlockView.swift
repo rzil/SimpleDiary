@@ -1,15 +1,13 @@
-
 import SwiftUI
 
 struct UnlockView: View {
-    @EnvironmentObject var appState: AppState
+    @EnvironmentObject var appState: DiaryAppState
     @State private var password: String = ""
     @State private var errorMessage: String?
 
     var body: some View {
         VStack(spacing: 16) {
             Text("Unlock Journal")
-                .font(.title)
 
             SecureField("Master Password", text: $password)
                 .textFieldStyle(.roundedBorder)
@@ -45,6 +43,7 @@ struct UnlockView: View {
         password = ""
         errorMessage = nil
         appState.unlockWithPassword(pw)
-        // In a real app you'd observe an error state from AppState and set errorMessage
+        // In a real app you'd observe an error state from DiaryAppState and set errorMessage
     }
 }
+

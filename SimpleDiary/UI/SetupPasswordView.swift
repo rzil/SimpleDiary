@@ -2,7 +2,7 @@
 import SwiftUI
 
 struct SetupPasswordView: View {
-    @EnvironmentObject var appState: AppState
+    @EnvironmentObject var appState: DiaryAppState
     @State private var password: String = ""
     @State private var confirm: String = ""
     @State private var errorMessage: String?

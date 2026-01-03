@@ -9,7 +9,7 @@ struct BiometricsToggleTests {
     @Test("Enabling and disabling biometrics updates meta and persists")
     func toggleBiometricsPersists() async {
         let base = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(UUID().uuidString)
-        let app = AppState(baseDir: base, biometricManager: StubBiometricManager())
+        let app = DiaryAppState(baseDir: base, biometricManager: StubBiometricManager())
         await app.initialize()
         app.createVault(named: "BIO", password: "pw")
         #expect(app.vaultMeta?.biometricsEnabled == false)
@@ -18,7 +18,7 @@ struct BiometricsToggleTests {
         #expect(app.vaultMeta?.biometricsEnabled == true)
 
         // Reload and verify persistence
-        let appReloaded = AppState(baseDir: base, biometricManager: StubBiometricManager())
+        let appReloaded = DiaryAppState(baseDir: base, biometricManager: StubBiometricManager())
         await appReloaded.initialize()
         #expect(appReloaded.vaultMeta?.biometricsEnabled == true)
 
@@ -26,7 +26,7 @@ struct BiometricsToggleTests {
         appReloaded.setBiometricsEnabled(false)
         #expect(appReloaded.vaultMeta?.biometricsEnabled == false)
 
-        let appReloaded2 = AppState(baseDir: base, biometricManager: StubBiometricManager())
+        let appReloaded2 = DiaryAppState(baseDir: base, biometricManager: StubBiometricManager())
         await appReloaded2.initialize()
         #expect(appReloaded2.vaultMeta?.biometricsEnabled == false)
     }

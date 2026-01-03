@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ChangePasswordView: View {
-    @EnvironmentObject var appState: AppState
+    @EnvironmentObject var appState: DiaryAppState
     @Environment(\.dismiss) private var dismiss
     
     @State private var currentPassword: String = ""

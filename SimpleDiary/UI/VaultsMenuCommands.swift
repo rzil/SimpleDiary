@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 struct VaultsMenuCommands: Commands {
-    @ObservedObject var appState: AppState
+    @ObservedObject var appState: DiaryAppState
 
     var body: some Commands {
         CommandMenu("Vaults") {

@@ -9,7 +9,7 @@ import SwiftUI
 import AppKit
 
 struct AppMenuCommands: Commands {
-    @ObservedObject var appState: AppState
+    @ObservedObject var appState: DiaryAppState
     
     var body: some Commands {
         CommandMenu("Journal") {

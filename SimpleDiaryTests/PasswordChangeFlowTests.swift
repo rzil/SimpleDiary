@@ -9,7 +9,7 @@ struct PasswordChangeFlowTests {
     @Test("changePassword updates key and rejects old password")
     func changePasswordFlow() async throws {
         let base = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(UUID().uuidString)
-        let app = AppState(baseDir: base, biometricManager: StubBiometricManager())
+        let app = DiaryAppState(baseDir: base, biometricManager: StubBiometricManager())
         await app.initialize()
 
         // Create vault and unlock
@@ -35,7 +35,7 @@ struct PasswordChangeFlowTests {
     @Test("forceSetNewMasterPassword updates key while unlocked")
     func forceSetNewMasterPasswordFlow() async throws {
         let base = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(UUID().uuidString)
-        let app = AppState(baseDir: base, biometricManager: StubBiometricManager())
+        let app = DiaryAppState(baseDir: base, biometricManager: StubBiometricManager())
         await app.initialize()
         app.createVault(named: "PWT2", password: "pw1")
         #expect(app.mode == .unlocked)

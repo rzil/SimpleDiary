@@ -3,7 +3,7 @@ import Combine // Using RichTextView for search highlighting
 
 struct JournalEditorView: View {
     @EnvironmentObject var store: JournalStore
-    @EnvironmentObject var appState: AppState
+    @EnvironmentObject var appState: DiaryAppState
     @Binding var entry: JournalEntry
     @FocusState private var isTitleFocused: Bool
     

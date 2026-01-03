@@ -20,7 +20,7 @@ enum AutoLockOption: Int, CaseIterable, Identifiable {
 }
 
 struct SettingsView: View {
-    @EnvironmentObject var appState: AppState
+    @EnvironmentObject var appState: DiaryAppState
     @Environment(\.dismiss) private var dismiss
     
     @State private var showingChangePassword = false

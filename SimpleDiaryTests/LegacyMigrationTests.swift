@@ -16,7 +16,7 @@ struct LegacyMigrationTests {
         try Data([0x00]).write(to: legacyURL)
 
         // Initialize should attempt migration only when index is empty
-        let app = AppState(baseDir: base, biometricManager: StubBiometricManager())
+        let app = DiaryAppState(baseDir: base, biometricManager: StubBiometricManager())
         await app.initialize()
 
         // After migration, either needsSetup or locked depending on header readability; at minimum, index should have one vault

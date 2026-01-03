@@ -26,12 +26,12 @@ struct MathUtilitiesTests {
 }
 
 @MainActor
-@Suite("AppState lightweight logic")
+@Suite("DiaryAppState lightweight logic")
 struct AppStateLogicTests {
     @Test("updateAutoLockTimeout writes into meta when present")
     func updateAutoLockTimeout() async {
         let tempDir = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(UUID().uuidString)
-        let app = AppState(baseDir: tempDir, biometricManager: StubBiometricManager())
+        let app = DiaryAppState(baseDir: tempDir, biometricManager: StubBiometricManager())
 
         // Seed meta directly (we're not exercising file I/O here)
         app.selectedVaultID = UUID()
@@ -44,7 +44,7 @@ struct AppStateLogicTests {
     @Test("lock moves mode to locked and clears sensitive state")
     func lockResetsState() async {
         let tempDir = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(UUID().uuidString)
-        let app = AppState(baseDir: tempDir, biometricManager: StubBiometricManager())
+        let app = DiaryAppState(baseDir: tempDir, biometricManager: StubBiometricManager())
 
         // Start from default state; call lock() and verify invariants we can observe.
         app.lock()

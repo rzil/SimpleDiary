@@ -75,5 +75,117 @@ struct PBKDF2Tests {
         let keyEmptySalt = try PBKDF2.deriveKey(password: "pw", salt: Data(), iterations: 1000, keyLength: 32)
         #expect(keyEmptySalt.count == 32)
     }
+
+    @Test("Encryption round-trip with PBKDF2-derived key (AES-GCM)")
+    func encryptionRoundTrip() throws {
+        // Given
+        let password = "correct horse battery staple"
+        let salt = Data("fixed-testsalt-01".utf8) // deterministic test salt
+        let iterations = 10_000
+        let keyLength = 32 // 256-bit key for AES-GCM
+        let plaintext = Data("Secret diary entry contents".utf8)
+        // Derive key
+        let keyData = try PBKDF2.deriveKey(password: password, salt: salt, iterations: iterations, keyLength: keyLength)
+        let symKey = SymmetricKey(data: keyData)
+
+        // Encrypt
+        let sealed = try AES.GCM.seal(plaintext, using: symKey)
+        let combined = try #require(sealed.combined)
+
+        // Decrypt
+        let opened = try AES.GCM.SealedBox(combined: combined)
+        let decrypted = try AES.GCM.open(opened, using: symKey)
+
+        // Then
+        #expect(decrypted == plaintext)
+    }
+
+    @Test("Wrong password should fail decryption (AES-GCM)")
+    func wrongPasswordDecryptionFails() throws {
+        // Given
+        let correctPassword = "correct horse battery staple"
+        let wrongPassword = "correct horse battery stapler" // subtle difference
+        let salt = Data("fixed-testsalt-02".utf8)
+        let iterations = 10_000
+        let keyLength = 32
+        let plaintext = Data("Another secret entry".utf8)
+
+        // Derive correct key and encrypt
+        let correctKeyData = try PBKDF2.deriveKey(password: correctPassword, salt: salt, iterations: iterations, keyLength: keyLength)
+        let correctKey = SymmetricKey(data: correctKeyData)
+        let sealed = try AES.GCM.seal(plaintext, using: correctKey)
+        let combined = try #require(sealed.combined)
+
+        // Derive wrong key
+        let wrongKeyData = try PBKDF2.deriveKey(password: wrongPassword, salt: salt, iterations: iterations, keyLength: keyLength)
+        let wrongKey = SymmetricKey(data: wrongKeyData)
+
+        // When/Then: opening with the wrong key should throw
+        do {
+            let sealedBox = try AES.GCM.SealedBox(combined: combined)
+            _ = try AES.GCM.open(sealedBox, using: wrongKey)
+            #expect(Bool(false), "Decryption with wrong password unexpectedly succeeded")
+        } catch {
+            // Expected: authentication should fail
+            #expect(true)
+        }
+    }
+
+    @Test("Unicode password and binary salt produce stable key length")
+    func unicodePasswordBinarySalt() throws {
+        let password = "pässwörd🔒"
+        var salt = Data(count: 16)
+        // Deterministic binary salt: 0x00, 0x01, ... 0x0F
+        salt.withUnsafeMutableBytes { buf in
+            guard let base = buf.baseAddress?.assumingMemoryBound(to: UInt8.self) else { return }
+            for i in 0..<buf.count { base[i] = UInt8(i & 0xFF) }
+        }
+        let key = try PBKDF2.deriveKey(password: password, salt: salt, iterations: 4096, keyLength: 32)
+        #expect(key.count == 32)
+    }
+    @Test("Invalid parameters: negative iterations should throw")
+    func negativeIterationsThrows() throws {
+        do {
+            _ = try PBKDF2.deriveKey(password: "pw", salt: Data([0x00]), iterations: -1, keyLength: 32)
+            #expect(Bool(false), "Expected error for negative iterations")
+        } catch PBKDF2.Error.invalidIterations {
+            #expect(true)
+        } catch {
+            #expect(Bool(false), "Unexpected error: \(error)")
+        }
+    }
+
+    @Test("Invalid parameters: zero or negative key length should throw if enforced")
+    func invalidKeyLengthThrowsIfEnforced() throws {
+        // If your PBKDF2 implementation enforces keyLength > 0, this should throw.
+        // If it doesn't, this test will assert the returned length instead.
+        var threw = false
+        do {
+            _ = try PBKDF2.deriveKey(password: "pw", salt: Data([0xAA]), iterations: 1_000, keyLength: 0)
+        } catch {
+            threw = true
+        }
+        if threw {
+            #expect(true)
+        } else {
+            // Fallback behavior: if no throw, ensure implementation returns empty key for length 0
+            let key = try PBKDF2.deriveKey(password: "pw", salt: Data([0xAA]), iterations: 1_000, keyLength: 0)
+            #expect(key.count == 0)
+        }
+    }
+
+    @Test("Long inputs: large password and salt")
+    func longInputs() throws {
+        // 4KB password of repeating pattern
+        let password = String(repeating: "p@$$w0rd🚀", count: 400) // ~4KB UTF-8
+        // 512-byte binary salt
+        var salt = Data(count: 512)
+        salt.withUnsafeMutableBytes { buf in
+            guard let base = buf.baseAddress?.assumingMemoryBound(to: UInt8.self) else { return }
+            for i in 0..<buf.count { base[i] = UInt8((i * 31) & 0xFF) }
+        }
+        let key = try PBKDF2.deriveKey(password: password, salt: salt, iterations: 2_000, keyLength: 48)
+        #expect(key.count == 48)
+    }
 }
 

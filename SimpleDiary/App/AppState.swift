@@ -124,13 +124,44 @@ final class AppState: ObservableObject {
         vaultsDir.appendingPathComponent("\(id.uuidString).vault")
     }
     
+    // MARK: - Private helper for biometric label
+    
+    private func biometricLabelForSelectedVault() -> String? {
+        guard let id = selectedVaultID else { return nil }
+        return "biometricKey_\(id.uuidString)"
+    }
+    
     // MARK: - Vault lifecycle
     
     func initialize() async {
-        // Load or create index
+        // Create vaults directory
         do {
             try fileManager.createDirectory(at: vaultsDir, withIntermediateDirectories: true)
         } catch {}
+        
+        // One-time migration for legacy single vault
+        let legacyURL = baseDir.appendingPathComponent("Diary.vault")
+        if fileManager.fileExists(atPath: legacyURL.path) {
+            // Only migrate if we have no indexed vaults yet
+            loadVaultsIndex()
+            if vaults.isEmpty {
+                let id = UUID()
+                let newURL = vaultURL(for: id)
+                do {
+                    try fileManager.createDirectory(at: vaultsDir, withIntermediateDirectories: true)
+                    try fileManager.moveItem(at: legacyURL, to: newURL)
+                    let name = "Imported Vault"
+                    let info = VaultInfo(id: id, name: name, lastOpened: nil)
+                    vaults = [info]
+                    saveVaultsIndex()
+                    selectedVaultID = id
+                } catch {
+                    print("Migration failed:", error)
+                }
+            }
+        }
+        
+        // Load or create index
         loadVaultsIndex()
         
         // Auto-select last opened vault if none selected
@@ -328,19 +359,29 @@ final class AppState: ObservableObject {
     
     func unlockWithBiometrics() {
         guard vaultMeta?.biometricsEnabled ?? false else { return }
-        
-        biometricManager.loadKeyWithBiometrics { [weak self] result in
-            Task { @MainActor in
-                guard let self else { return }
-                switch result {
-                case .success(let key):
-                    do {
-                        try self.completeUnlock(with: key)
-                    } catch {
-                        print("Biometric unlock failed:", error)
+        guard let label = biometricLabelForSelectedVault() else { return }
+        if let manager = biometricManager as? BiometricKeychainManager {
+            manager.loadKeyWithBiometrics(label: label) { [weak self] result in
+                Task { @MainActor in
+                    guard let self else { return }
+                    switch result {
+                    case .success(let key):
+                        do { try self.completeUnlock(with: key) } catch { print("Biometric unlock failed:", error) }
+                    case .failure(let error):
+                        print("Biometric key load failed:", error)
                     }
-                case .failure(let error):
-                    print("Biometric key load failed:", error)
+                }
+            }
+        } else {
+            biometricManager.loadKeyWithBiometrics { [weak self] result in
+                Task { @MainActor in
+                    guard let self else { return }
+                    switch result {
+                    case .success(let key):
+                        do { try self.completeUnlock(with: key) } catch { print("Biometric unlock failed:", error) }
+                    case .failure(let error):
+                        print("Biometric key load failed:", error)
+                    }
                 }
             }
         }
@@ -390,25 +431,27 @@ final class AppState: ObservableObject {
     
     func setBiometricsEnabled(_ enabled: Bool) {
         if enabled {
-            guard let key = currentKey else { return }
+            guard let key = currentKey, let label = biometricLabelForSelectedVault() else { return }
             do {
-                try biometricManager.storeKey(key)
-                UserDefaults.standard.set(true, forKey: udKey("biometricsEnabled"))
-                if var meta = vaultMeta {
-                    meta.biometricsEnabled = true
-                    vaultMeta = meta
+                if let manager = biometricManager as? BiometricKeychainManager {
+                    try manager.storeKey(key, label: label)
+                } else {
+                    try biometricManager.storeKey(key)
                 }
+                UserDefaults.standard.set(true, forKey: udKey("biometricsEnabled"))
+                if var meta = vaultMeta { meta.biometricsEnabled = true; vaultMeta = meta }
             } catch {
                 print("Failed to enable biometrics:", error)
             }
         } else {
             do {
-                try biometricManager.deleteKey()
-                UserDefaults.standard.set(false, forKey: udKey("biometricsEnabled"))
-                if var meta = vaultMeta {
-                    meta.biometricsEnabled = false
-                    vaultMeta = meta
+                if let label = biometricLabelForSelectedVault(), let manager = biometricManager as? BiometricKeychainManager {
+                    try manager.deleteKey(label: label)
+                } else {
+                    try biometricManager.deleteKey()
                 }
+                UserDefaults.standard.set(false, forKey: udKey("biometricsEnabled"))
+                if var meta = vaultMeta { meta.biometricsEnabled = false; vaultMeta = meta }
             } catch {
                 print("Failed to disable biometrics:", error)
             }

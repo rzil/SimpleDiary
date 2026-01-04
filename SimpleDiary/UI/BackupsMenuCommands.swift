@@ -50,7 +50,7 @@ struct BackupsMenuCommands: Commands {
                     if response == .OK, let url = panel.url {
                         Task {
                             do {
-                                try appState.importBackupFromICloud(backupFolder: url, replaceExisting: true)
+                                try appState.importBackupFrom(backupFolder: url, replaceExisting: true)
                                 notifier.alert = .init(title: "Restore Complete", message: "Restored from: \(url.lastPathComponent)")
                             } catch {
                                 notifier.alert = .init(title: "Restore Failed", message: error.localizedDescription)

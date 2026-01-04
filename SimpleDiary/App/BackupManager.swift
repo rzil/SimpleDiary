@@ -104,17 +104,8 @@ public struct BackupManager {
     ///   - backupFolder: The URL of the backup folder in iCloud Drive.
     ///   - replaceExisting: If true, existing files will be overwritten; if false, existing files will be preserved.
     /// - Throws: An error if the backup folder is invalid, unavailable, or copying fails.
-    public func importFromICloudBackup(at backupFolder: URL, replaceExisting: Bool) throws {
-        guard let backupDirectory = iCloudBackupDirectory()?.standardizedFileURL else {
-            throw NSError(domain: "BackupError", code: 2, userInfo: [NSLocalizedDescriptionKey: "iCloud backup directory is unavailable"])
-        }
-        
+    public func importFromBackup(at backupFolder: URL, replaceExisting: Bool) throws {
         let backupFolderStandardized = backupFolder.standardizedFileURL
-        
-        // Verify backupFolder is within iCloudBackupDirectory
-        guard backupFolderStandardized.path.hasPrefix(backupDirectory.path) else {
-            throw NSError(domain: "BackupError", code: 3, userInfo: [NSLocalizedDescriptionKey: "Backup folder is not within the iCloud backup directory"])
-        }
         
         // Copy VaultsIndex.json if exists
         let indexFileBackup = backupFolderStandardized.appendingPathComponent("VaultsIndex.json", isDirectory: false)

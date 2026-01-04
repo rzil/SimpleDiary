@@ -699,8 +699,8 @@ final class DiaryAppState: ObservableObject {
     /// - Parameters:
     ///   - backupFolder: URL within the app's iCloud backup directory.
     ///   - replaceExisting: If true, overwrite existing vault files with those from backup.
-    func importBackupFromICloud(backupFolder: URL, replaceExisting: Bool) throws {
-        try backupManager.importFromICloudBackup(at: backupFolder, replaceExisting: replaceExisting)
+    func importBackupFrom(backupFolder: URL, replaceExisting: Bool) throws {
+        try backupManager.importFromBackup(at: backupFolder, replaceExisting: replaceExisting)
         // After import, reload index and adjust selection if needed
         loadVaultsIndex()
         if selectedVaultID != nil, let id = selectedVaultID, !vaults.contains(where: { $0.id == id }) {

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		773923E62F0A71D20081F4FB /* SwiftMath in Frameworks */ = {isa = PBXBuildFile; productRef = 773923E52F0A71D20081F4FB /* SwiftMath */; };
 		77DB49FF2F0A3CFC00667292 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 77DB49FE2F0A3CFC00667292 /* MarkdownUI */; };
 /* End PBXBuildFile section */
 
@@ -57,6 +58,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				773923E62F0A71D20081F4FB /* SwiftMath in Frameworks */,
 				77DB49FF2F0A3CFC00667292 /* MarkdownUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -111,6 +113,7 @@
 			name = SimpleDiary;
 			packageProductDependencies = (
 				77DB49FE2F0A3CFC00667292 /* MarkdownUI */,
+				773923E52F0A71D20081F4FB /* SwiftMath */,
 			);
 			productName = SimpleDiary;
 			productReference = 778F9E542ED1700500FBC1F1 /* SimpleDiary.app */;
@@ -169,6 +172,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				77DB49FD2F0A3CFC00667292 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
+				773923E42F0A71D20081F4FB /* XCRemoteSwiftPackageReference "SwiftMath" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 778F9E552ED1700500FBC1F1 /* Products */;
@@ -513,6 +517,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		773923E42F0A71D20081F4FB /* XCRemoteSwiftPackageReference "SwiftMath" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mgriebling/SwiftMath.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.7.3;
+			};
+		};
 		77DB49FD2F0A3CFC00667292 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/gonzalezreal/swift-markdown-ui.git";
@@ -524,6 +536,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		773923E52F0A71D20081F4FB /* SwiftMath */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 773923E42F0A71D20081F4FB /* XCRemoteSwiftPackageReference "SwiftMath" */;
+			productName = SwiftMath;
+		};
 		77DB49FE2F0A3CFC00667292 /* MarkdownUI */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 77DB49FD2F0A3CFC00667292 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;

@@ -129,10 +129,9 @@ struct JournalEditorView: View {
             
             if isPreviewMode {
                 ScrollView {
-                    Markdown(entry.body)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    MarkdownWithMathView(source: entry.body, bodyPointSize: CGFloat(bodyPointSize))
                         .padding(.vertical, 4)
-                        .textSelection(.enabled) // if you want selection
+                        .textSelection(.enabled)
                 }
             } else {
                 RichTextView(text: $entry.body, highlights: highlights, selectedRange: $selectedRange)

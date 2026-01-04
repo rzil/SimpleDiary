@@ -1,6 +1,8 @@
 import Combine
 import Foundation
 import CryptoKit
+import UniformTypeIdentifiers
+// BackupManager is separate
 
 struct VaultInfo: Codable, Identifiable, Equatable {
     let id: UUID
@@ -53,6 +55,7 @@ final class DiaryAppState: ObservableObject {
     private var indexURL: URL { baseDir.appendingPathComponent("VaultsIndex.json") }
     
     private let biometricManager: BiometricKeychainManaging
+    private lazy var backupManager = BackupManager(appSupportBase: baseDir)
     
     private var saveWorkItem: DispatchWorkItem?
     
@@ -682,5 +685,26 @@ final class DiaryAppState: ObservableObject {
         
         // Save after 0.7s of no further edits
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.7, execute: workItem)
+    }
+
+    /// Export the current app state to iCloud Drive. If vaultID is nil, export all vaults.
+    func exportBackupToICloud(vaultID: UUID? = nil) throws -> URL {
+        guard FileManager.default.url(forUbiquityContainerIdentifier: nil) != nil else {
+            throw NSError(domain: "BackupError", code: -10, userInfo: [NSLocalizedDescriptionKey: "iCloud Drive is unavailable on this device/account."])
+        }
+        return try backupManager.exportCurrentStateToICloudDrive(vaultID: vaultID)
+    }
+
+    /// Import a backup from a given iCloud backup folder URL back into app storage.
+    /// - Parameters:
+    ///   - backupFolder: URL within the app's iCloud backup directory.
+    ///   - replaceExisting: If true, overwrite existing vault files with those from backup.
+    func importBackupFromICloud(backupFolder: URL, replaceExisting: Bool) throws {
+        try backupManager.importFromICloudBackup(at: backupFolder, replaceExisting: replaceExisting)
+        // After import, reload index and adjust selection if needed
+        loadVaultsIndex()
+        if selectedVaultID != nil, let id = selectedVaultID, !vaults.contains(where: { $0.id == id }) {
+            selectedVaultID = vaults.first?.id
+        }
     }
 }

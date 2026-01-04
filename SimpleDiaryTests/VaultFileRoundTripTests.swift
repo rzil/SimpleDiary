@@ -25,7 +25,7 @@ struct VaultFileRoundTripTests {
     }
 
     @Test("Unsupported schema version throws .unsupportedSchemaVersion")
-    func unsupportedSchema() throws {
+    @MainActor func unsupportedSchema() throws {
         // Build a manual file with schemaVersion 999
         let badHeader = VaultHeader(schemaVersion: 999, saltBase64: Data([9,9,9]).base64EncodedString(), iterations: 100)
         let headerData = try JSONEncoder().encode(badHeader)
@@ -55,3 +55,4 @@ struct VaultFileRoundTripTests {
         }
     }
 }
+

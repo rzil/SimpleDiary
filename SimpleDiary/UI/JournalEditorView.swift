@@ -1,4 +1,5 @@
 import SwiftUI
+import MarkdownUI
 import Combine // Using RichTextView for search highlighting
 
 struct JournalEditorView: View {
@@ -6,6 +7,7 @@ struct JournalEditorView: View {
     @EnvironmentObject var appState: DiaryAppState
     @Binding var entry: JournalEntry
     @FocusState private var isTitleFocused: Bool
+    @State private var isPreviewMode: Bool = false
     
     // Persist the editor font size across launches
     @AppStorage("editorBodyPointSize") private var bodyPointSize: Double = 17
@@ -84,7 +86,7 @@ struct JournalEditorView: View {
             
             Divider()
             
-            if isFindBarVisible {
+            if !isPreviewMode && isFindBarVisible {
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(.secondary)
@@ -125,20 +127,32 @@ struct JournalEditorView: View {
                 .padding(.vertical, 4)
             }
             
-            RichTextView(text: $entry.body, highlights: highlights, selectedRange: $selectedRange)
-                .font(.system(size: CGFloat(bodyPointSize)))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .onChange(of: entry.body) { updateMatches() }
+            if isPreviewMode {
+                ScrollView {
+                    Markdown(entry.body)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 4)
+                        .textSelection(.enabled) // if you want selection
+                }
+            } else {
+                RichTextView(text: $entry.body, highlights: highlights, selectedRange: $selectedRange)
+                    .font(.system(size: CGFloat(bodyPointSize)))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .onChange(of: entry.body) { updateMatches() }
+            }
         }
         .padding()
-        .onChange(of: entry) {
+        .onChange(of: entry) { _, _ in
             appState.scheduleSave()
+        }
+        .onChange(of: isPreviewMode) { _, newValue in
+            if newValue { isFindBarVisible = false }
         }
         .onAppear { isTitleFocused = true }
         // Keyboard shortcuts for Find
         .overlay(
             Group {
-                Button("") { isFindBarVisible = true; isFindFocused = true }
+                Button("") { if !isPreviewMode { isFindBarVisible = true; isFindFocused = true } }
                     .keyboardShortcut("f", modifiers: [.command])
                     .opacity(0)
                 Button("") { goToNextMatch() }
@@ -161,6 +175,13 @@ struct JournalEditorView: View {
         )
         .toolbar {
             ToolbarItemGroup {
+                Picker("Mode", selection: $isPreviewMode) {
+                    Text("Edit").tag(false)
+                    Text("Preview").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .help("Toggle between editing and Markdown preview")
+
                 Button {
                     bodyPointSize = max(bodyPointSize - 1, 10)
                 } label: {
@@ -188,4 +209,3 @@ struct JournalEditorView: View {
         }
     }
 }
-

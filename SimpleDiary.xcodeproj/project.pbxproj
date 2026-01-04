@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		77DB49FF2F0A3CFC00667292 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 77DB49FE2F0A3CFC00667292 /* MarkdownUI */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		779330F22F098D300022856B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -53,6 +57,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				77DB49FF2F0A3CFC00667292 /* MarkdownUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -105,6 +110,7 @@
 			);
 			name = SimpleDiary;
 			packageProductDependencies = (
+				77DB49FE2F0A3CFC00667292 /* MarkdownUI */,
 			);
 			productName = SimpleDiary;
 			productReference = 778F9E542ED1700500FBC1F1 /* SimpleDiary.app */;
@@ -161,6 +167,9 @@
 			);
 			mainGroup = 778F9E4B2ED1700500FBC1F1;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				77DB49FD2F0A3CFC00667292 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 778F9E552ED1700500FBC1F1 /* Products */;
 			projectDirPath = "";
@@ -500,6 +509,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		77DB49FD2F0A3CFC00667292 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gonzalezreal/swift-markdown-ui.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.4.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		77DB49FE2F0A3CFC00667292 /* MarkdownUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 77DB49FD2F0A3CFC00667292 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
+			productName = MarkdownUI;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 778F9E4C2ED1700500FBC1F1 /* Project object */;
 }

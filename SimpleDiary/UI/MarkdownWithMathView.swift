@@ -26,13 +26,11 @@ struct MarkdownWithMathView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                 case .mathBlock(let latex):
-                    SwiftMathView(
+                    SwiftMathBlock(
                         latex: latex,
                         fontSize: max(14, bodyPointSize + 2),
-                        displayMode: true,
                         foregroundColor: .primary
                     )
-                    .frame(maxWidth: .infinity, minHeight: 80, alignment: .leading)
                     .padding(.vertical, 4)
                 }
             }

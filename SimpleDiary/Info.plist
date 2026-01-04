@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+ "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+
+  <!-- App identity -->
+  <key>CFBundleIdentifier</key>
+  <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+
+  <key>CFBundleName</key>
+  <string>$(PRODUCT_NAME)</string>
+
+  <key>CFBundleExecutable</key>
+  <string>$(EXECUTABLE_NAME)</string>
+
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+
+  <key>CFBundleVersion</key>
+  <string>$(CURRENT_PROJECT_VERSION)</string>
+
+  <key>CFBundleShortVersionString</key>
+  <string>$(MARKETING_VERSION)</string>
+
+  <key>LSMinimumSystemVersion</key>
+  <string>13.0</string>
+
+  <!-- UTType export -->
+  <key>UTExportedTypeDeclarations</key>
+  <array>
+    <dict>
+      <key>UTTypeIdentifier</key>
+      <string>au.integritech.simplediary.vault</string>
+
+      <key>UTTypeDescription</key>
+      <string>SimpleDiary Vault Backup</string>
+
+      <key>UTTypeConformsTo</key>
+      <array>
+        <string>public.data</string>
+      </array>
+
+      <key>UTTypeTagSpecification</key>
+      <dict>
+        <key>public.filename-extension</key>
+        <array>
+          <string>vault</string>
+        </array>
+        <key>public.mime-type</key>
+        <string>application/x-simplediary-vault</string>
+      </dict>
+    </dict>
+  </array>
+
+</dict>
+</plist>

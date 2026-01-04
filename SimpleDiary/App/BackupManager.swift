@@ -11,43 +11,23 @@ public struct BackupManager {
         self.appSupportBase = appSupportBase
     }
     
-    /// Returns the URL to the iCloud Drive backup directory under `Documents/SimpleDiaryBackups`, creating it if necessary.
-    /// - Returns: The backup directory URL if iCloud is available, or nil otherwise.
-    public func iCloudBackupDirectory() -> URL? {
-        guard let ubiquityURL = fileManager.url(forUbiquityContainerIdentifier: nil) else {
-            return nil
-        }
-        let backupDir = ubiquityURL.appendingPathComponent("Documents", isDirectory: true)
-            .appendingPathComponent("SimpleDiaryBackups", isDirectory: true)
-        if !fileManager.fileExists(atPath: backupDir.path) {
-            do {
-                try fileManager.createDirectory(at: backupDir, withIntermediateDirectories: true, attributes: nil)
-            } catch {
-                return nil
-            }
-        }
-        return backupDir
-    }
-    
-    /// Exports the current vault state to iCloud Drive by creating a timestamped backup folder and copying the index and vault files.
+    /// Exports the current vault state to a specified destination directory by creating a timestamped backup folder and copying the index and vault files.
     ///
-    /// - Parameter vaultID: The UUID of a specific vault to back up, or nil to back up all vaults.
-    /// - Throws: An error if the backup directory is unavailable or copying fails.
-    /// - Returns: The URL of the created backup folder in iCloud Drive.
-    public func exportCurrentStateToICloudDrive(vaultID: UUID?) throws -> URL {
-        guard let backupDirectory = iCloudBackupDirectory() else {
-            throw NSError(domain: "BackupError", code: 1, userInfo: [NSLocalizedDescriptionKey: "iCloud backup directory is unavailable"])
-        }
-        
+    /// - Parameters:
+    ///   - destinationDirectory: The directory in which to create the backup folder.
+    ///   - vaultID: The UUID of a specific vault to back up, or nil to back up all vaults.
+    /// - Throws: An error if creating the backup folder or copying files fails.
+    /// - Returns: The URL of the created backup folder.
+    public func exportCurrentState(to destinationDirectory: URL, vaultID: UUID?) throws -> URL {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
         let timestamp = formatter.string(from: Date())
         let baseBackupFolderName = "Backup_\(timestamp)"
         
-        var backupFolder = backupDirectory.appendingPathComponent(baseBackupFolderName, isDirectory: true)
+        var backupFolder = destinationDirectory.appendingPathComponent(baseBackupFolderName, isDirectory: true)
         var suffixIndex = 1
         while fileManager.fileExists(atPath: backupFolder.path) {
-            backupFolder = backupDirectory.appendingPathComponent("\(baseBackupFolderName)_\(suffixIndex)", isDirectory: true)
+            backupFolder = destinationDirectory.appendingPathComponent("\(baseBackupFolderName)_\(suffixIndex)", isDirectory: true)
             suffixIndex += 1
         }
         
@@ -86,6 +66,36 @@ public struct BackupManager {
         }
         
         return backupFolder
+    }
+    
+    /// Returns the URL to the iCloud Drive backup directory under `Documents/SimpleDiaryBackups`, creating it if necessary.
+    /// - Returns: The backup directory URL if iCloud is available, or nil otherwise.
+    public func iCloudBackupDirectory() -> URL? {
+        guard let ubiquityURL = fileManager.url(forUbiquityContainerIdentifier: nil) else {
+            return nil
+        }
+        let backupDir = ubiquityURL.appendingPathComponent("Documents", isDirectory: true)
+            .appendingPathComponent("SimpleDiaryBackups", isDirectory: true)
+        if !fileManager.fileExists(atPath: backupDir.path) {
+            do {
+                try fileManager.createDirectory(at: backupDir, withIntermediateDirectories: true, attributes: nil)
+            } catch {
+                return nil
+            }
+        }
+        return backupDir
+    }
+    
+    /// Exports the current vault state to iCloud Drive by creating a timestamped backup folder and copying the index and vault files.
+    ///
+    /// - Parameter vaultID: The UUID of a specific vault to back up, or nil to back up all vaults.
+    /// - Throws: An error if the backup directory is unavailable or copying fails.
+    /// - Returns: The URL of the created backup folder in iCloud Drive.
+    public func exportCurrentStateToICloudDrive(vaultID: UUID?) throws -> URL {
+        guard let backupDirectory = iCloudBackupDirectory() else {
+            throw NSError(domain: "BackupError", code: 1, userInfo: [NSLocalizedDescriptionKey: "iCloud backup directory is unavailable"])
+        }
+        return try exportCurrentState(to: backupDirectory, vaultID: vaultID)
     }
     
     /// Imports vault data from a given backup folder in iCloud Drive into the app's Application Support directory.
@@ -167,3 +177,4 @@ public struct BackupManager {
         }
     }
 }
+

@@ -707,4 +707,16 @@ final class DiaryAppState: ObservableObject {
             selectedVaultID = vaults.first?.id
         }
     }
+    
+    func exportBackup(to destinationDirectory: URL) throws -> URL {
+        // Ensure the destination is a directory we can write into.
+        var isDir: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: destinationDirectory.path, isDirectory: &isDir), isDir.boolValue else {
+            throw NSError(domain: "BackupError", code: -20, userInfo: [NSLocalizedDescriptionKey: "Destination is not a directory."])
+        }
+        
+        // Export the current app state into the provided destination directory. Export all vaults by default.
+        let exportedFolder = try backupManager.exportCurrentState(to: destinationDirectory, vaultID: nil)
+        return exportedFolder
+    }
 }

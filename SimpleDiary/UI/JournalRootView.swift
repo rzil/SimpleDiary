@@ -81,6 +81,21 @@ struct JournalRootView: View {
                     }
                     .disabled(selectedID == nil)
                 }
+                
+                // Duplicate
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        if let id = selectedID, let new = store.duplicateEntry(withID: id) {
+                            selectedID = new.id
+                            appState.noteActivity()
+                        }
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                    }
+                    .disabled(selectedID == nil)
+                    .help("Duplicate selected entry")
+                    .keyboardShortcut("D", modifiers: .command)
+                }
 
                 // 🔽 Sort toggle
                 ToolbarItem(placement: .primaryAction) {

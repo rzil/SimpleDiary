@@ -1,4 +1,3 @@
-
 import Foundation
 import Combine
 import CryptoKit
@@ -71,5 +70,31 @@ final class JournalStore: ObservableObject {
     func deleteEntries(at offsets: IndexSet) {
         entries.remove(atOffsets: offsets)
         save()
+    }
+    
+    @discardableResult
+    func duplicateEntry(withID id: JournalEntry.ID) -> JournalEntry? {
+        guard let index = entries.firstIndex(where: { $0.id == id }) else { return nil }
+        let original = entries[index]
+        // Construct a new entry instead of mutating `id` (which is likely a `let`)
+        let newTitle: String = {
+            if original.title.isEmpty { return original.title }
+            return "\(original.title) (Copy)"
+        }()
+        let copy = JournalEntry(
+            id: UUID(),
+            date: Date(),
+            title: newTitle,
+            body: original.body
+        )
+        // Insert right after the original's current position
+        let insertIndex = index + 1
+        if insertIndex <= entries.count {
+            entries.insert(copy, at: insertIndex)
+        } else {
+            entries.append(copy)
+        }
+        save()
+        return copy
     }
 }

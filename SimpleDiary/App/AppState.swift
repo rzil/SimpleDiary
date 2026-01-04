@@ -72,7 +72,7 @@ final class DiaryAppState: ObservableObject {
             in: .userDomainMask,
             appropriateFor: nil,
             create: true
-        ).appendingPathComponent("DiaryApp", isDirectory: true)
+        ).appendingPathComponent("SimpleDiary", isDirectory: true)
         
         if !fm.fileExists(atPath: appSupport.path) {
             try? fm.createDirectory(at: appSupport, withIntermediateDirectories: true)

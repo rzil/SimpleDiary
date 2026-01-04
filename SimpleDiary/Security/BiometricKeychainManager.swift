@@ -7,7 +7,7 @@ import Security
 /// Biometrics are enforced by the app (via LocalAuthentication)
 /// before we ever read this key.
 final class BiometricKeychainManager: BiometricKeychainManaging {
-    private let service = "DiaryApp"
+    private let service = "SimpleDiary"
     private let account = "vault-key"
     
     private func account(for label: String?) -> String {

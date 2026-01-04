@@ -31,6 +31,48 @@ struct JournalRootView: View {
                         }
                     }
                     .tag(entry.id)
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            if let idx = store.entries.firstIndex(where: { $0.id == entry.id }) {
+                                // Clear selection if deleting the selected row
+                                if selectedID == entry.id { selectedID = nil }
+                                store.deleteEntries(at: IndexSet(integer: idx))
+                                appState.noteActivity()
+                            }
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+
+                        Button {
+                            if let new = store.duplicateEntry(withID: entry.id) {
+                                selectedID = new.id
+                                appState.noteActivity()
+                            }
+                        } label: {
+                            Label("Duplicate", systemImage: "doc.on.doc")
+                        }
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            if let idx = store.entries.firstIndex(where: { $0.id == entry.id }) {
+                                if selectedID == entry.id { selectedID = nil }
+                                store.deleteEntries(at: IndexSet(integer: idx))
+                                appState.noteActivity()
+                            }
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+
+                        Button {
+                            if let new = store.duplicateEntry(withID: entry.id) {
+                                selectedID = new.id
+                                appState.noteActivity()
+                            }
+                        } label: {
+                            Label("Duplicate", systemImage: "doc.on.doc")
+                        }
+                        .tint(.blue)
+                    }
                 }
                 .onDelete { indexSet in
                     // Must map visible indexSet back to original store.entries indexes

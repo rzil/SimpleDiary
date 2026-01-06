@@ -11,7 +11,6 @@ import MarkdownUI
 
 struct MarkdownWithMathView: View {
     let source: String
-    var bodyPointSize: CGFloat
 
     private var nodes: [PreviewNode] {
         splitMarkdownAndMathBlocks(source)
@@ -28,7 +27,7 @@ struct MarkdownWithMathView: View {
                 case .mathBlock(let latex):
                     SwiftMathBlock(
                         latex: latex,
-                        fontSize: max(14, bodyPointSize + 2),
+                        fontSize: 18,
                         foregroundColor: .primary
                     )
                     .padding(.vertical, 4)
@@ -66,22 +65,50 @@ func splitMarkdownAndMathBlocks(_ input: String) -> [PreviewNode] {
         }
     }
 
+    // Helper to find the next opening delimiter among $$ or \[
+    func nextOpen(from index: String.Index) -> (range: Range<String.Index>, kind: String)? {
+        let search = s[index...]
+        let dollar = search.range(of: "$$")
+        let bracket = search.range(of: "\\[")
+        switch (dollar, bracket) {
+        case (nil, nil):
+            return nil
+        case let (d?, nil):
+            return (d, "$$")
+        case let (nil, b?):
+            return (b, "\\[")
+        case let (d?, b?):
+            if d.lowerBound <= b.lowerBound { return (d, "$$") } else { return (b, "\\[") }
+        }
+    }
+
+    // Map opening kind to its closing delimiter
+    func closingDelimiter(for kind: String) -> String {
+        switch kind {
+        case "$$": return "$$"
+        case "\\[": return "\\]"
+        default: return kind
+        }
+    }
+
     while i < s.endIndex {
-        guard let start = s[i...].range(of: "$$") else {
+        guard let open = nextOpen(from: i) else {
             emitMarkdown(s[i...])
             break
         }
 
-        emitMarkdown(s[i..<start.lowerBound])
+        // Emit markdown before the opening delimiter
+        emitMarkdown(s[i..<open.range.lowerBound])
 
-        let afterStart = start.upperBound
-        guard let end = s[afterStart...].range(of: "$$") else {
-            // unmatched $$, treat rest as markdown
-            emitMarkdown(s[start.lowerBound...])
+        let afterOpen = open.range.upperBound
+        let closeToken = closingDelimiter(for: open.kind)
+        guard let end = s[afterOpen...].range(of: closeToken) else {
+            // unmatched opening, treat rest as markdown
+            emitMarkdown(s[open.range.lowerBound...])
             break
         }
 
-        let latexRaw = s[afterStart..<end.lowerBound]
+        let latexRaw = s[afterOpen..<end.lowerBound]
         let latex = String(latexRaw).trimmingCharacters(in: .whitespacesAndNewlines)
         out.append(.mathBlock(latex))
 

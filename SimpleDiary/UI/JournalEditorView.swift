@@ -129,7 +129,7 @@ struct JournalEditorView: View {
             
             if isPreviewMode {
                 ScrollView {
-                    MarkdownWithMathView(source: entry.body, bodyPointSize: CGFloat(bodyPointSize))
+                    MarkdownWithMathView(source: entry.body)
                         .padding(.vertical, 4)
                         .textSelection(.enabled)
                 }

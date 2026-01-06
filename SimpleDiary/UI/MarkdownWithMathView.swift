@@ -31,7 +31,7 @@ struct MarkdownWithMathView: View {
                         fontSize: 18,
                         foregroundColor: .primary
                     )
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 8)
                     .background(
                         Color(nsColor: .secondarySystemFill)
                     )

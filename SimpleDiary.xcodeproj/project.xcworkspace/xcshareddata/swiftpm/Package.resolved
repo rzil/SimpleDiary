@@ -1,5 +1,5 @@
 {
-  "originHash" : "e83dcfdd0afa08637001d94ef3040bdac4f4e36eefca571b83cc3c72f73eda45",
+  "originHash" : "32fc90cefc19995d65055ffa68549d6c4a241d97ccf1c8c1b28eec6ab36f203e",
   "pins" : [
     {
       "identity" : "networkimage",
@@ -31,10 +31,10 @@
     {
       "identity" : "swiftmath",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/mgriebling/SwiftMath.git",
+      "location" : "https://github.com/rzil/SwiftMath",
       "state" : {
-        "revision" : "fa8244ed032f4a1ade4cb0571bf87d2f1a9fd2d7",
-        "version" : "1.7.3"
+        "branch" : "feature/add-category-theory-symbols",
+        "revision" : "a18cfdeb35fb1b58d45f9ba8a3c73193b5c8ca80"
       }
     }
   ],

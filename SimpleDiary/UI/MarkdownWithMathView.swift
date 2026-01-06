@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 import MarkdownUI
+import AppKit
 
 struct MarkdownWithMathView: View {
     let source: String
@@ -31,6 +32,10 @@ struct MarkdownWithMathView: View {
                         foregroundColor: .primary
                     )
                     .padding(.vertical, 4)
+                    .background(
+                        Color(nsColor: .secondarySystemFill)
+                    )
+                    .cornerRadius(6)
                 }
             }
         }
@@ -129,3 +134,4 @@ func splitMarkdownAndMathBlocks(_ input: String) -> [PreviewNode] {
 
     return merged
 }
+

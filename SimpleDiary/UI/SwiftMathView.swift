@@ -46,7 +46,7 @@ private final class SwiftMathContainerView: NSView {
 
         label.translatesAutoresizingMaskIntoConstraints = false
 //        label.backgroundColor = .clear
-        label.textAlignment = .left
+        label.textAlignment = .center
         label.labelMode = .display
         label.contentInsets = .zero
 

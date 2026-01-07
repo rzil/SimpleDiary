@@ -101,6 +101,19 @@ struct JournalEditorView: View {
                     updateMatchesAndHighlights(keepCurrentIndex: false)
                 }
 
+            // Clear search text
+            Button {
+                findQuery = ""
+                updateMatchesAndHighlights(keepCurrentIndex: false)
+                isFindFocused = true
+            } label: {
+                Image(systemName: "xmark.circle")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help("Clear Search")
+            .disabled(findQuery.isEmpty)
+
             if totalMatches > 0 {
                 Text("\(currentMatchIndex + 1) of \(totalMatches)")
                     .font(.caption)
@@ -287,3 +300,4 @@ struct JournalEditorView: View {
         updateMatchesAndHighlights(keepCurrentIndex: true)
     }
 }
+

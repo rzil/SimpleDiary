@@ -5,6 +5,8 @@ struct JournalEditorView: View {
     @EnvironmentObject var store: JournalStore
     @EnvironmentObject var appState: DiaryAppState
     @Binding var entry: JournalEntry
+    @State private var loadedEntryID: JournalEntry.ID? = nil
+    @Environment(\.undoManager) private var undoManager
 
     @FocusState private var isTitleFocused: Bool
     @State private var isPreviewMode: Bool = false
@@ -46,7 +48,7 @@ struct JournalEditorView: View {
                 TextEditor(text: $attributedBody, selection: $selection)
                     .font(.system(size: CGFloat(bodyPointSize)))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    // Disable interaction and hide when in preview
+                    .disabled(isPreviewMode)
                     .allowsHitTesting(!isPreviewMode)
                     .opacity(isPreviewMode ? 0 : 1)
                     .onChange(of: attributedBody) { _, newValue in
@@ -83,8 +85,15 @@ struct JournalEditorView: View {
         }
         .onAppear {
             isTitleFocused = true
-            // Initialize editor from stored body
+            loadedEntryID = entry.id
             attributedBody = AttributedString(entry.body)
+            updateMatchesAndHighlights(keepCurrentIndex: false)
+        }
+        .onChange(of: entry.id) { _, newID in
+            // Switching to a different diary entry: refresh editor state
+            loadedEntryID = newID
+            attributedBody = AttributedString(entry.body)
+            selection = AttributedTextSelection() // optional reset
             updateMatchesAndHighlights(keepCurrentIndex: false)
         }
         // Keyboard shortcuts for Find

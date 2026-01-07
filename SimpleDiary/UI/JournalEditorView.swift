@@ -41,17 +41,17 @@ struct JournalEditorView: View {
                 findBar
             }
 
-            if isPreviewMode {
-                ScrollView {
-                    MarkdownWithMathView(source: entry.body)
-                        .padding(.vertical, 4)
-                        .textSelection(.enabled)
-                }
-            } else {
+            ZStack(alignment: .topLeading) {
+                // Keep the editor alive to preserve undo stack
                 TextEditor(text: $attributedBody, selection: $selection)
                     .font(.system(size: CGFloat(bodyPointSize)))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    // Disable interaction and hide when in preview
+                    .allowsHitTesting(!isPreviewMode)
+                    .opacity(isPreviewMode ? 0 : 1)
                     .onChange(of: attributedBody) { _, newValue in
+                        // Skip programmatic updates while preview is shown to avoid undo glitches
+                        guard !isPreviewMode else { return }
                         // Push edits back into your stored String
                         let newPlain = String(newValue.characters)
                         if entry.body != newPlain {
@@ -61,6 +61,16 @@ struct JournalEditorView: View {
                         // Recompute matches/highlights while typing
                         updateMatchesAndHighlights(keepCurrentIndex: true)
                     }
+
+                // Overlay Markdown preview when enabled
+                if isPreviewMode {
+                    ScrollView {
+                        MarkdownWithMathView(source: entry.body)
+                            .padding(.vertical, 4)
+                            .textSelection(.enabled)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
         }
         .padding()
